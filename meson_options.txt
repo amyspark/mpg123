@@ -1,0 +1,6 @@
+option('modules', type: 'feature', value: 'auto', description: 'Dynamically loadable output module support (default enabled in shared library builds)')
+option('programs', type: 'feature', value: 'auto', description: 'Build programs')
+option('fifo', type: 'feature', value: 'auto', description: 'FIFO support for control interface (auto-enabled on linux)')
+option('id3v2', type: 'feature', value: 'enabled', description: 'ID3v2 parsing')
+option('ntom', type: 'feature', value: 'enabled', description: 'flexible resampling')
+option('downsample', type: 'feature', value: 'enabled', description: 'downsampled decoding')
