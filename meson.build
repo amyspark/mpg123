@@ -93,7 +93,39 @@ build_libout123 = get_option('libout123')
 build_libout123_modules = get_option('libout123-modules')
 build_libsyn123 = get_option('libsyn123')
 
+conf.set('BUILD_PROGRAMS', build_programs)
+conf.set('BUILD_LIBMPG123', build_libmpg123)
+conf.set('BUILD_LIBOUT123', build_libout123)
+conf.set('BUILD_LIBOUT123_MODULES', build_libout123_modules)
+conf.set('BUILD_LIBOUT123_OR_MODULES', build_libout123 or build_libout123_modules)
+conf.set('BUILD_LIBSYN123', build_libsyn123 )
+# If we install libraries, prompting pkgconfig and include directories.
+conf.set('NEED_LIB', build_libmpg123 or build_libout123 or build_libout123_modules or build_libsyn123)
+conf.set('NEED_MAINLIB', build_libmpg123 or build_libout123 or build_libsyn123)
+
+components = []
+
+if build_programs.allowed()
+    components += ['programs']
+endif
+
+if build_libmpg123.allowed()
+    components += ['libmpg123']
+endif
+if build_libout123.allowed()
+    components += ['libout123']
+endif
+if build_libout123_modules.allowed()
+    components += ['libout123-modules']
+endif
+if build_libsyn123.allowed()
+    components += ['libsyn123']
+endif
+
+############## Configurable Options
 # Set default options (I won't make them configurable)
+xdebug = get_option('xdebug')
+conf.set('XDEBUG', xdebug)
 conf.set('GAPLESS', true)
 fifo = get_option('fifo')
 conf.set('HAVE_MKFIFO', fifo.allowed())
@@ -167,6 +199,7 @@ buffer = buffer.disable_auto_if(
 # FIXME: all my supported CPUs require float
 # FIXME: int16 etc.
 conf.set('HAVE_SYNTH16', true)
+conf.set('HAVE_SYNTH8', true)
 conf.set('HAVE_SYNTH32', true)
 conf.set('HAVE_SYNTHREAL', true)
 
@@ -942,7 +975,7 @@ if win32_specific_codes
     #### Check for Win32 Named Pipe functions
     win32_fifo_working = false
     winver = ""
-    if get_option('fifo').allowed()
+    if fifo.allowed()
         if cc.links('''
             #include <windows.h>
             int main(){
@@ -1001,5 +1034,150 @@ ipv6 = get_option('ipv6')
 network_type = get_option('network')
 
 if network_type == 'auto'
-    
+    if have_fork
+        network_type = 'exec'
+    elif win32_specific_codes
+        network_type = 'wininethttp'
+    elif have_network
+        network_type = 'internal'
+    else
+        network_type = 'disabled'
+    endif
 endif
+
+if network_type == 'exec' and have_fork
+  error('exec network support selected but fork not available')
+endif
+if network_type == 'wininethttp' and win32_specific_codes
+  error('wininet or winhttp is currently only for Windows')
+endif
+
+#### Use Win32 support codes
+win32_codes = win32_specific_codes
+
+ipv6 = ipv6.require(have_ipv6 and network_type != 'disabled')
+
+if network_type != 'disabled' and network_internal == 'winsock2'
+    conf.set('WANT_WIN32_SOCKETS', 1)
+endif
+
+conf.set('NETWORK_WINSOCK', network_type != 'disabled' and network_internal == 'winsock2')
+# new net123
+conf.set('NET123', network_type != 'disabled')
+conf.set('NET123_EXEC', network_type == 'exec')
+conf.set('NET123_WINHTTP', network_type == 'wininethttp') # or winhttp
+conf.set('NET123_WININET', network_type == 'wininethttp') # or wininet
+
+############## Terminal choice
+
+conf.set('TERM_POSIX', term_type == 'posix')
+conf.set('TERM_NONE', term_type == 'none')
+conf.set('TERM_WIN32', term_type == 'win32')
+
+############## FIFO enable
+
+fifo = fifo.enable_auto_if(have_mkfifo)
+
+if fifo.allowed()
+    conf.set('FIFO', true)
+    if not have_mkfifo
+        warning('You forced FIFO code while I think there is no mkfifo() available!')
+    endif
+endif
+
+############## Network enable
+if network_type != 'disabled'
+    conf.set('NETWORK', true)
+    if not have_network
+        warning('You forced network code while I think there is support missing!')
+    endif
+endif
+
+if ipv6.allowed()
+    conf.set('IPV6', true)
+    if not have_ipv6
+        warning('You forced IPv6 code while I think there is no getaddrinfo() available!')
+    endif
+endif
+
+############## Library cleanup
+
+# FIXME: call up src etc. here
+
+############## Final Output
+
+# FIXME: generate
+# libmpg123.pc
+# libout123.pc
+# libsyn123.pc
+
+############## Display Message
+
+summary({
+    'Install path': get_option('prefix'),
+    'Components': components,
+    'CPU optimization': cpu_type,
+    'Compiler Optimization': get_option('optimization'),
+    'Use yasm (for AVX only)': get_variable('check_yasm', false),
+    'Gapless Support': conf.get('GAPLESS', false),
+    'Debugging': get_option('debug'),
+    'Terminal control': term_type,
+    'Extreme debugging': conf.get('XDEBUG', false),
+    'Seek table size': seektable,
+    'FIFO support': fifo,
+    'Buffer': buffer,
+    'External network': network_type,
+    'Internal network type': network_internal,
+    'IPv6 (getaddrinfo)': ipv6,
+    'largefile sensitive': conf.get('LFS_SENSITIVE', false),
+    'default offsets': sizeof_off_t * 8,
+    'explicit 64 bit offsets': use_largefile,
+    'forced 64 bit offsets': conf.get('FORCED_OFF_64', false),
+    'only portable API': conf.get('PORTABLE_API', false),
+})
+
+if conf.get('FORCED_OFF_64', false)
+    warning('Ensure that client programs are built with _FILE_OFFSET_BITS defined to 64, too.\nOld binaries built for 32 bit off_t may fail missing symbols in mpg123 libraries.')
+endif
+
+summary({
+    'Layer I': layer1,
+    'Layer II': layer2,
+    'Layer III': layer3,
+    'NtoM resampling': ntom,
+    'downsampled decoding': downsample,
+    'Feeder/buffered input': feeder,
+    'ID3v2 parsing': id3v2,
+    'String API': conf.get('HAVE_STRING', false),
+    'ICY parsing/conversion': conf.get('HAVE_ICY', false),
+    'Error/warning messages': messages,
+    'Win32 Unicode File Open.': win32_unicode,
+    'Feature Report Function.': conf.get('HAVE_FEATURE', false),
+    'Equalizer': equalizer,
+}, name: 'Core libmpg123 features')
+
+# FIXME implement if needed
+summary({
+    '8 bit integer': conf.get('NO_8BIT', false),
+    '16 bit integer': conf.get('NO_16BIT', false),
+    '32/24 bit integer': conf.get('NO_32BIT', false),
+    'real (32 bit float)': conf.get('NO_REAL', false),
+}, name: 'Output formats (nofpu will disable all but 16 or 8 bit!)')
+
+summary({
+    'Integer conversion': int_quality,
+    'IEEE 754 hackery': conf.get('IEEE_FLOAT', false),
+    'New/old WRITE_SAMPLE': newoldwritesample,
+    'new Huffman scheme': new_huffman,
+    'runtime tables': runtimetables,
+}, name: 'Optimization detail')
+
+message('Disabling core features is not commonly done and some combinations might not build/work. If you encounter such a case, help yourself (and provide a patch) or just poke the maintainers."')
+
+summary({
+    'libsyn123 special cases': specialcases,
+    'Modules': modules,
+    'Checked audio modules': check_modules,
+    'Detected audio support': output_modules,
+    'Runtime order': default_output_modules,
+})
