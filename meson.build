@@ -1,5 +1,5 @@
 project('mpg123', 'c',
-  meson_version: '>= 1.2.0',
+  meson_version: '>= 1.3.0',
   license: 'LGPL2.1+',
   # C11 is needed for Metal support
   # Static libraries by default following upstream
@@ -558,3 +558,193 @@ conf.set('HAVE_FEATURE', true)
 conf.set('CCALIGN', ccalign)
 
 ############## Output module choice
+
+# The full list of supported modules to check, first come, first serve.
+check_modules = get_option('with_audio')
+output_modules = []
+
+if check_modules != []
+    message('Limiting outputs to build according to your preference')
+else
+    check_modules = [
+        'pulse', 'alsa', 'tinyalsa', 'oss', 'coreaudio', 'sndio', 'sun',
+        'win32', 'win32_wasapi', # 'os2', 'esd',
+        'jack', 'portaudio', 'sdl', # 'nas', 'arts',
+        'openal',
+    ]
+endif
+
+# Dummy output module is always built alongside libout123, but not
+# when just building the modules.
+if build_libout123
+	check_modules += ['dummy']
+endif
+
+foreach m : check_modules
+    if m == 'dummy'
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    elif m == 'oss'
+        headers = ['sys/soundcard.h', 'linux/soundcard.h', 'machine/soundcard.h']
+        check = false
+        foreach h : headers
+            v = cc.has_header(h)
+            conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), v)
+            check = check or v
+        endif
+        if check
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        else
+            error('A required header for @0@ is missing'.format(m))
+        endif
+    elif m == 'tinyalsa'
+        tinyalsa_dep = dependency('tinyalsa', required: true)
+        cc.has_function('pcm_open', prefix: '#include <tinyalsa/asoundlib.h>', dependencies: tinyalsa_dep, required: true)
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    elif m == 'alsa'
+        if conf.get('HAVE_QSA', false)
+            conf.set('HAVE_ALSA', false)
+        else
+            alsa_dep = cc.find_library('asound', required: true)
+            cc.has_function('snd_pcm_open', prefix: '#include <alsa/asoundlib.h>', dependencies: alsa_dep, required: true)
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        endif
+    elif m == 'jack'
+        jack_dep = dependency('jack', required: false)
+        # JACK module uses semaphores, hence -lpthread.
+        cc.has_function('sem_post', dependencies: jack_dep, required: true)
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    elif m == 'pulse'
+        pulse_dep = dependency('libpulse-simple', required: true)
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    elif m == 'portaudio'
+        # Assuming a good install of portaudio, with pkg-config.
+        portaudio_dep = dependency('portaudio-2.0', required: true)
+        cc.has_function('Pa_Initialize', prefix: '#include <portaudio.h>', dependencies: portaudio_dep)
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        if not cc.has_function('Pa_GetVersion', dependencies: portaudio_dep)
+            # portaudio v18 API is wanted.
+            conf.set('PORTAUDIO18', true)
+        endif
+    elif m == 'sdl'
+        sdl_dep = dependency('sdl2', required: true, fallback: 'sdl')
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    elif m == 'win32'
+        win32_dep = cc.find_library('winmm', required: true)
+        cc.has_function('waveOutOpen', prefix: '#include <windows.h>', dependencies: win32_dep, required: true)
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    elif m == 'win32_wasapi'
+        win32_wasapi_dep = [
+            cc.find_library('ole32', required: true)
+            cc.find_library('avrt', required: true)
+        ]
+        cc.compiles('''
+            #define COBJMACROS 1
+            #define _WIN32_WINNT 0x601
+            #include <initguid.h>
+            #include <audioclient.h>
+            #include <mmdeviceapi.h>
+            #include <avrt.h>
+            int main(){
+                /* UUID Checks */
+                GUID *IDs[] = {
+                    &CLSID_MMDeviceEnumerator,
+                    &IID_IMMDeviceEnumerator,
+                    &IID_IAudioClient,
+                    &IID_IAudioRenderClient
+                };
+                return 0;
+            }
+        ''', name: 'we have wasapi headers', dependencies: win32_wasapi_dep, required: true)
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    elif m == 'sndio'
+        sndio_dep = dependency('sndio', required: true)
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    elif m == 'sun'
+        headers = ['sun/audioio.h', 'sys/audioio.h', 'asm/audioio.h', 'sys/audio.h']
+        check = false
+        foreach h : headers
+            v = cc.has_header(h)
+            conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), v)
+            check = check or v
+        endforeach
+        if check
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        else
+            error('A required header for @0@ is missing'.format(m))
+        endif
+    elif m == 'coreaudio'
+        coreaudio_dep = [
+            dependency('appleframeworks', modules : 'AudioToolbox', required: true)
+        ]
+        headers = ['AudioUnit/AudioUnit.h', 'AudioToolbox/AudioToolbox.h']
+        check = true
+        foreach h : headers
+            v = cc.has_header(h, dependencies: coreaudio_dep)
+            conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), v)
+            check = check and v
+        endforeach
+        if check
+            if not cc.links('''
+                #include <AudioUnit/AudioUnit.h>
+                int main()
+                {
+                    AudioUnitInitialize(NULL);
+                    return 0;
+                }
+            ''', name: 'if AudioUnit functions are available within AudioToolbox')
+                coreaudio_dep += [
+                    dependency('appleframeworks', modules : 'AudioUnit', required: true)
+                ]
+            endif
+            headers = ['CoreServices/CoreServices.h']
+            foreach h : headers
+                v = cc.has_header(h)
+                conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), v)
+            endforeach
+            buffer = buffer.require(not modules.disabled())
+            if modules.disabled()
+                warning('Disabling buffer because of directly linked CoreAudio! Use the module if you need the buffer.')
+            endif
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        else
+            error('A required header for @0@ is missing'.format(m))
+        endif
+    elif m == 'openal'
+        # Assuming openal-soft and OpenAL.framework for sanity reasons.
+        openal_dep = dependency('appleframeworks', modules : 'OpenAL', required: false)
+        headers = ['OpenAL/al.h', 'OpenAL/alc.h', 'AL/al.h', 'AL/alc.h', 'al.h', 'alc.h']
+        if not openal_dep.found()
+            openal_dep = dependency('openal', required: true)
+        endif
+        foreach h : headers
+            v = cc.has_header(h, dependencies: openal_dep)
+            conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), v)
+        endforeach
+        if conf.get('HAVE_OPENAL_AL_H', false) and conf.get('HAVE_OPENAL_ALC_H', false)
+            conf.set('OPENAL_SUBDIR_OPENAL', true)
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        elif conf.get('HAVE_AL_AL_H', false) and conf.get('HAVE_AL_ALC_H', false)
+            conf.set('OPENAL_SUBDIR_OPENAL', true)
+        elif conf.get('HAVE_AL_H', false) and conf.get('HAVE_ALC_H', false)
+            # Windows?
+        else
+            error('A required header for @0@ is missing'.format(m))
+        endif
+        output_modules += [m]
+        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    endif
+endforeach
