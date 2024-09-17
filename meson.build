@@ -3,7 +3,7 @@ project('mpg123', 'c',
   license: 'LGPL2.1+',
   # C11 is needed for Metal support
   # Static libraries by default following upstream
-  default_options: [ 'buildtype=debugoptimized', 'c_std=c11', 'default_library=shared'],
+  default_options: [ 'buildtype=debugoptimized', 'c_std=c11', 'default_library=shared', 'b_lundef=true'],
   version: '1.32.7',
 )
 
@@ -16,7 +16,8 @@ meson_cpu = host_machine.cpu_family()
 
 conf = configuration_data()
 
-conf.set('HAVE_CLOCK_GETTIME', cc.has_function('clock_gettime'))
+librt_dep = cc.find_library('rt', required: false)
+conf.set('HAVE_CLOCK_GETTIME', cc.has_function('clock_gettime', dependencies: librt_dep))
 
 modules = get_option('modules').enable_if(
     get_option('default_library') == 'shared'
@@ -48,6 +49,7 @@ endif
 
 
 deps = []
+libdl = []
 if not modules
     message('Modules disabled, not checking for dynamic loading.')
 elif os in ['windows', 'cygwin']
@@ -65,23 +67,23 @@ elif os in ['windows', 'cygwin']
         )
     )
 else
-    deps = [cc.find_library('dl')]
-    dlopen = cc.has_function('dlopen', dependencies: deps)
-    dlsym = cc.has_function('dlsym', dependencies: deps)
-    dlclose = cc.has_function('dlclose', dependencies: deps)
+    dep = cc.find_library('dl')
+    dlopen = cc.has_function('dlopen', dependencies: dep)
+    dlsym = cc.has_function('dlsym', dependencies: dep)
+    dlclose = cc.has_function('dlclose', dependencies: dep)
 
     conf.set('HAVE_DLOPEN', dlopen)
     conf.set('HAVE_DLSYM', dlsym)
     conf.set('HAVE_DLCLOSE', dlclose)
-    conf.set('HAVE_DLFCN_H', cc.has_header('dlfcn.h', dependencies: deps))
+    conf.set('HAVE_DLFCN_H', cc.has_header('dlfcn.h', dependencies: dep))
 
     modules = modules.enable_auto_if(dlopen and dlclose and dlsym)
 
     if modules.allowed()
         message('We found a runtime loader: Modules enabled.')
+        libdl = dep
     else
         warning('We did not find a runtime loader: Modules disabled.')
-        modules.disable_auto_if(true)
     endif
     conf.set('USE_MODULES', modules.allowed())
     conf.set_quoted('LT_MODULE_EXT', os == 'windows' ? '.dll' : '.so')
@@ -489,9 +491,9 @@ endif
 conf.set('HAVE_GETADDRINFO', cc.has_function('getaddrinfo', dependencies: deps))
 have_ipv6 = conf.get('HAVE_GETADDRINFO')
 
-deps += [cc.find_library('m'), cc.find_library('mx')]
-cc.has_function('sqrt', deps: deps, required: true)
-cc.has_function('powf', deps: deps, required: true)
+m_dep = [cc.find_library('m', required: false), cc.find_library('mx', required: false)]
+cc.has_function('sqrt', deps: m_dep, required: true)
+cc.has_function('powf', deps: m_dep, required: true)
 
 conf.set('HAVE_BYTESWAP_H', cc.has_header('byteswap.h'))
 
@@ -841,6 +843,14 @@ conf.set('DEFAULT_OUTPUT_MODULE', default_output_modules.join(','))
 
 ############## Compiler Optimizations
 
+conf.set('BUILD_BUFFER', buffer.allowed())
+if build.disabled()
+    add_project_arguments('-DNOXFERMEM', language: 'c')
+endif
+if newoldwritesample.allowed()
+    add_project_arguments('-DNEWOLD_WRITE_SAMPLE', language: 'c')
+endif
+
 if get_option('optimization') >= 2
     add_project_arguments(
         cc.get_supported_arguments([
@@ -1102,14 +1112,35 @@ endif
 
 ############## Library cleanup
 
-# FIXME: call up src etc. here
+subdirectory('src')
 
 ############## Final Output
 
-# FIXME: generate
-# libmpg123.pc
-# libout123.pc
-# libsyn123.pc
+pkg = import('pkgconfig')
+
+if conf.get('NEED_MAINLIB', false)
+    # Pkg-config files and library includes.
+    if build_libmpg123
+        pkg.generate(libmpg123,
+            description: 'An optimised MPEG Audio decoder',
+            version: meson.project_version(),
+        )
+    endif
+    if build_libout123
+        pkg.generate(libout123,
+            description: 'A streaming audio output API derived from mpg123',
+            version: meson.project_version(),
+        )
+    endif
+    if build_libsyn123
+        pkg.generate(libsyn123,
+            description: 'A signal synthesis library accompanying mpg123',
+            version: meson.project_version(),
+        )
+    endif
+endif
+
+subdirectory('man1')
 
 ############## Display Message
 
