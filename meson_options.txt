@@ -26,3 +26,5 @@ option('portable', type: 'feature', value: 'disabled', description: 'only build 
 option('largefile', type: 'feature', value: 'auto', description: 'attempt to use 64 bit file offsets internally')
 option('with_audio', type: 'array', value: ['dummy'], description: 'Only build the given output modules')
 option('with_default_audio', type: 'array', value: ['dummy'], description: 'Use these modules as the default output')
+option('ipv6', type: 'feature', value: 'auto', description: 'IPv6 support in internal network stack')
+option('network', type: 'combo', choices: ['auto', 'none', 'internal', 'wininethttp', 'exec'],  value: 'auto', description: 'Available options, depending on platform, are auto, none, internal, wininethttp, and exec (wget or curl binaries).\nThe internal code is always built in addition to external options for plain HTTP (esp. Shoutcast v1) support.\nThe external option is for HTTPS by default, but can be used for HTTP, too.')

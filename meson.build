@@ -843,12 +843,11 @@ if cc.has_define('__MINGW32__') and cc.has_header('_mingw_mac.h')
 endif
 
 if win32_specific_codes
+    #### Check for Wide functions
     win32_unicode = cc.has_function('_wopen', prefix: '#include <io.h>')
     if uwp_build
         conf.set('WANT_WIN32_UNICODE', true)
     elif win32_unicode
-        win32_wide_working = false
-        win32_winver_bump = false
         shlwapi_dep = cc.find_library('shlwapi')
         if cc.links('''
             #include <windows.h>
@@ -862,24 +861,24 @@ if win32_specific_codes
                 return 0;
             }''', name: 'Unicode functions working', dependencies: shlwapi_dep)
             win32_wide_working = true
-        else
+        elif not win32_winver_bump
             win32_winver_bump = true
         endif
 
-        if not win32_wide_working and cc.links('''
-            #define WINVER 0x501
-            #define _WIN32_WINNT 0x501
-            #include <windows.h>
-            #include <shlwapi.h>
-            #include <stdlib.h>
-            int main()
-            {
-                MultiByteToWideChar (0, 0, NULL, 0, NULL, 0);
-                WideCharToMultiByte (0, 0, NULL, 0, NULL, 0, NULL, NULL);
-                PathCombineW(0,0,0);
-                return 0;
-            }''', name: 'Unicode functions working with WINVER bump', dependencies: shlwapi_dep)
-            win32_wide_working = true
+        if not win32_wide_working
+            win32_wide_working = cc.links('''
+                #define WINVER 0x501
+                #define _WIN32_WINNT 0x501
+                #include <windows.h>
+                #include <shlwapi.h>
+                #include <stdlib.h>
+                int main()
+                {
+                    MultiByteToWideChar (0, 0, NULL, 0, NULL, 0);
+                    WideCharToMultiByte (0, 0, NULL, 0, NULL, 0, NULL, NULL);
+                    PathCombineW(0,0,0);
+                    return 0;
+                }''', name: 'Unicode functions working with WINVER bump')
         endif
 
         if win32_wide_working
@@ -891,4 +890,116 @@ if win32_specific_codes
     else
         error('Unicode File Open for Win32 not available')
     endif
+
+    #### Check for Network functions
+    win32_sockets = cc.has_header('ws2tcpip.h')
+    if not win32_sockets
+        error('Please update your headers to support winsock 2.2.')
+    endif
+    conf.set('HAVE_WS2TCPIP_H', win32_sockets)
+    if win32_sockets
+        ws2_32_dep = cc.find_library('ws2_32')
+        if cc.links('''
+            #include <winsock2.h>
+            #include <ws2tcpip.h>
+            #include <stdlib.h>
+            int main()
+            {
+                getaddrinfo(NULL, NULL, NULL, NULL);
+                freeaddrinfo(NULL);
+                return 0;
+            }''', name: 'if winsock2 API is available', dependencies: ws2_32_dep)
+            win32_sockets_working = true
+        elif not win32_winver_bump
+            win32_winver_bump = true
+        endif
+
+        if not win32_sockets_working
+            win32_sockets_working = cc.links('''
+                #define WINVER 0x501
+                #define _WIN32_WINNT 0x501
+                #include <winsock2.h>
+                #include <ws2tcpip.h>
+                #include <stdlib.h>
+                int main()
+                {
+                    getaddrinfo(NULL, NULL, NULL, NULL);
+                    freeaddrinfo(NULL);
+                    return 0;
+                }
+            ''', name: 'deeper if winsock2 API is available', dependencies: ws2_32_dep)
+        endif
+
+        if win32_sockets_working
+            network_internal = 'winsock2'
+            have_network = true
+            have_ipv6 = true
+        else
+            error('Please update your headers to support winsock 2.2.')
+        endif
+    endif
+
+    #### Check for Win32 Named Pipe functions
+    win32_fifo_working = false
+    winver = ""
+    if get_option('fifo').allowed()
+        if cc.links('''
+            #include <windows.h>
+            int main(){
+                CreateNamedPipeA(NULL,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_BYTE,1,255,255,0,NULL);
+                CreateNamedPipeW(NULL,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_BYTE,1,255,255,0,NULL);
+                return 0;
+            }''', name: 'we have Named Pipes')
+            win32_fifo_working = true
+        elif not win32_winver_bump
+            win32_winver_bump = true
+        endif
+
+        if not win32_fifo_working
+            win32_fifo_working = cc.links('''
+                #define WINVER 0x501
+                #define _WIN32_WINNT 0x501
+                #include <windows.h>
+                int main(){
+                    CreateNamedPipeA(NULL,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_BYTE,1,255,255,0,NULL);
+                    CreateNamedPipeW(NULL,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_BYTE,1,255,255,0,NULL);
+                    return 0;
+                }''', name: 'we have Named Pipes with WINVER bump')
+        endif
+
+        have_mkfifo = win32_fifo_working
+        if win32_fifo_working
+            conf.set('WANT_WIN32_FIFO', true)
+        else
+            error('Unicode support for Win32 not working')
+        endif
+    else
+        error('Unicode File Open for Win32 not available')
+    endif
+
+    #### WINVER Bump
+    if win32_winver_bump
+        # Windows Vista and later APIs
+        conf.set('WINVER', '0x0600')
+        conf.set('_WIN32_WINNT', '0x0600')
+        # getaddrinfo and freeaddrinfo are available for Win2K and above
+        # Bug: MinGW.org w32api ws2tcpip.h incorrectly wants (_WIN32_WINNT >= 0x0501) for getaddrinfo and freeaddrinfo
+        # MultiByteToWideChar and WideCharToMultiByte are available for Win2K and above
+        # GetThreadErrorMode only available on Vista and Later
+    endif
+endif
+
+#### Check mingw.org for EOVERFLOW
+eoverflow_present = cc.has_header_symbol('errno.h', 'EOVERFLOW')
+if not eoverflow_present
+    conf.set('EOVERFLOW', 'EFBIG')
+endif
+
+ipv6 = get_option('ipv6')
+
+# make it clear that auto is the default for both enable and with options.
+network_type = get_option('network')
+
+if network_type == 'auto'
+    
 endif
