@@ -25,6 +25,7 @@ modules = get_option('modules').enable_if(
 conf.set('DYNAMIC_BUILD', modules.allowed())
 
 conf.set('HAVE_WINDOWS_H', os in ['windows', 'cygwin'] and cc.has_header('windows.h'))
+win32_specific_codes = conf.get('HAVE_WINDOWS_H', false) and os != 'cygwin'
 
 uwp_build = cc.compiles('''
     #include <winapifamily.h>
@@ -39,7 +40,7 @@ conf.set('WINDOWS_UWP', uwp_build)
 
 android_build = os == 'android'
 
-if os in ['windows', 'cygwin'] and modules
+if os in ['windows', 'cygwin'] and modules and win32_specific_codes
     modules.enable_auto_if(
         cc.has_function('GetThreadErrorMode', prefix: '#include <windows.h>')
     )
@@ -562,9 +563,11 @@ conf.set('CCALIGN', ccalign)
 # The full list of supported modules to check, first come, first serve.
 check_modules = get_option('with_audio')
 output_modules = []
+check_forced = false
 
 if check_modules != []
     message('Limiting outputs to build according to your preference')
+    check_forced = true
 else
     check_modules = [
         'pulse', 'alsa', 'tinyalsa', 'oss', 'coreaudio', 'sndio', 'sun',
@@ -595,58 +598,71 @@ foreach m : check_modules
         if check
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
-        else
+        elif check_forced
             error('A required header for @0@ is missing'.format(m))
         endif
     elif m == 'tinyalsa'
-        tinyalsa_dep = dependency('tinyalsa', required: true)
-        cc.has_function('pcm_open', prefix: '#include <tinyalsa/asoundlib.h>', dependencies: tinyalsa_dep, required: true)
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        tinyalsa_dep = dependency('tinyalsa', required: check_forced)
+        if cc.has_function('pcm_open',
+            prefix: '#include <tinyalsa/asoundlib.h>',
+            dependencies: tinyalsa_dep, required: check_forced)
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        endif
     elif m == 'alsa'
         if conf.get('HAVE_QSA', false)
             conf.set('HAVE_ALSA', false)
         else
-            alsa_dep = cc.find_library('asound', required: true)
-            cc.has_function('snd_pcm_open', prefix: '#include <alsa/asoundlib.h>', dependencies: alsa_dep, required: true)
+            alsa_dep = cc.find_library('asound', required: check_forced)
+            if cc.has_function('snd_pcm_open', prefix: '#include <alsa/asoundlib.h>', dependencies: alsa_dep, required: check_forced)
+                output_modules += [m]
+                conf.set('HAVE_@0@'.format(m.to_upper()), true)
+            endif
+        endif
+    elif m == 'jack'
+        jack_dep = dependency('jack', required: check_forced)
+        # JACK module uses semaphores, hence -lpthread.
+        # Assuming a good install exposing -lpthread.
+        if cc.has_function('sem_post', dependencies: jack_dep, required: check_forced)
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
         endif
-    elif m == 'jack'
-        jack_dep = dependency('jack', required: false)
-        # JACK module uses semaphores, hence -lpthread.
-        cc.has_function('sem_post', dependencies: jack_dep, required: true)
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
     elif m == 'pulse'
-        pulse_dep = dependency('libpulse-simple', required: true)
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        pulse_dep = dependency('libpulse-simple', required: check_forced)
+        if pulse_dep.found()
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        endif
     elif m == 'portaudio'
         # Assuming a good install of portaudio, with pkg-config.
-        portaudio_dep = dependency('portaudio-2.0', required: true)
-        cc.has_function('Pa_Initialize', prefix: '#include <portaudio.h>', dependencies: portaudio_dep)
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
-        if not cc.has_function('Pa_GetVersion', dependencies: portaudio_dep)
-            # portaudio v18 API is wanted.
-            conf.set('PORTAUDIO18', true)
+        # NOTE: if this doesn't link, add kernel32, ole32, setupapi, winmm
+        portaudio_dep = dependency('portaudio-2.0', required: check_forced)
+        if cc.has_function('Pa_Initialize', prefix: '#include <portaudio.h>', dependencies: portaudio_dep)
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+            if not cc.has_function('Pa_GetVersion', dependencies: portaudio_dep)
+                # portaudio v18 API is wanted.
+                conf.set('PORTAUDIO18', true)
+            endif
         endif
     elif m == 'sdl'
-        sdl_dep = dependency('sdl2', required: true, fallback: 'sdl')
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        sdl_dep = dependency('sdl2', required: check_forced, fallback: 'sdl')
+        if sdl_dep.found()
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        endif
     elif m == 'win32'
-        win32_dep = cc.find_library('winmm', required: true)
-        cc.has_function('waveOutOpen', prefix: '#include <windows.h>', dependencies: win32_dep, required: true)
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        win32_dep = cc.find_library('winmm', required: check_forced)
+        if cc.has_function('waveOutOpen', prefix: '#include <windows.h>', dependencies: win32_dep, required: check_forced)
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        endif
     elif m == 'win32_wasapi'
         win32_wasapi_dep = [
-            cc.find_library('ole32', required: true)
-            cc.find_library('avrt', required: true)
+            cc.find_library('ole32', required: check_forced)
+            cc.find_library('avrt', required: check_forced)
         ]
-        cc.compiles('''
+        if cc.compiles('''
             #define COBJMACROS 1
             #define _WIN32_WINNT 0x601
             #include <initguid.h>
@@ -663,13 +679,16 @@ foreach m : check_modules
                 };
                 return 0;
             }
-        ''', name: 'we have wasapi headers', dependencies: win32_wasapi_dep, required: true)
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+            ''', name: 'we have wasapi headers', dependencies: win32_wasapi_dep, required: check_forced)
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        endif
     elif m == 'sndio'
-        sndio_dep = dependency('sndio', required: true)
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        sndio_dep = dependency('sndio', required: check_forced)
+        if sndio_dep.found()
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        endif
     elif m == 'sun'
         headers = ['sun/audioio.h', 'sys/audioio.h', 'asm/audioio.h', 'sys/audio.h']
         check = false
@@ -681,7 +700,7 @@ foreach m : check_modules
         if check
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
-        else
+        elif check_forced
             error('A required header for @0@ is missing'.format(m))
         endif
     elif m == 'coreaudio'
@@ -719,7 +738,7 @@ foreach m : check_modules
             endif
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
-        else
+        elif check_forced
             error('A required header for @0@ is missing'.format(m))
         endif
     elif m == 'openal'
@@ -739,12 +758,137 @@ foreach m : check_modules
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
         elif conf.get('HAVE_AL_AL_H', false) and conf.get('HAVE_AL_ALC_H', false)
             conf.set('OPENAL_SUBDIR_OPENAL', true)
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
         elif conf.get('HAVE_AL_H', false) and conf.get('HAVE_ALC_H', false)
             # Windows?
-        else
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        elif check_forced
             error('A required header for @0@ is missing'.format(m))
         endif
-        output_modules += [m]
-        conf.set('HAVE_@0@'.format(m.to_upper()), true)
+    else
+        error('Unsupported/-known output @0@ demanded!'.format(m))
     endif
 endforeach
+
+# Did user choose default audio subsystem ?
+# That's (beginning of) the list for mpg123's internal default.
+with_default_audio = get_option('with_default_audio')
+default_output_modules = []
+if with_default_audio.length() != 0
+    default_output_modules = with_default_audio
+else
+    foreach m : output_modules
+        if m == 'dummy'
+            continue
+        else
+            default_output_modules += [m]
+        endif
+    endforeach
+endif
+
+default_output_module = ''
+if default_output_modules.length() != 0
+    default_output_module = default_output_modules[0]
+endif
+
+# Without actual modules, there is only the builtin one.
+if modules.disabled()
+  # Module-less build needs _some_ default module.
+  if default_output_module == ''
+    default_output_module = 'dummy'
+  endif
+  default_output_modules = [default_output_module]
+endif
+
+# Setup the static build.
+conf.set('BUILD_@0@'.format(default_output_module.to_upper()), true)
+conf.set('DEFAULT_OUTPUT_MODULE', default_output_modules.join(','))
+
+############## Compiler Optimizations
+
+if get_option('optimization') >= 2
+    add_project_arguments(
+        cc.get_supported_arguments([
+            '-fomit-frame-pointer', '-funroll-all-loops', '-finline-functions', '-ffast-math',
+            '/fp:fast',
+        ]),
+        language: 'c'
+    )
+endif
+
+############## Seektable size
+
+if seektable > 0
+    conf.set('FRAME_INDEX', 1)
+endif
+# Define that always... also without frame index enabled.
+conf.set('INDEX_SIZE', seektable)
+
+############## Win32 function checks
+
+# Check if we want Unicode for Win32. Cygwin and Midipix does not need _wopen
+compat_libs = []
+
+win32_unicode = 'unneeded'
+win32_sockets = false # disabled, does this have to be a feature
+win32_sockets_working = false
+win32_wide_working = false
+win32_winver_bump = false
+
+### mingw.org may not work properly for newer APIs
+if cc.has_define('__MINGW32__') and cc.has_header('_mingw_mac.h')
+    warning('You are using the mingw.org distribution\nmpg123 may not build properly\nPlease switch to using mingw-w64 if possible')
+endif
+
+if win32_specific_codes
+    win32_unicode = cc.has_function('_wopen', prefix: '#include <io.h>')
+    if uwp_build
+        conf.set('WANT_WIN32_UNICODE', true)
+    elif win32_unicode
+        win32_wide_working = false
+        win32_winver_bump = false
+        shlwapi_dep = cc.find_library('shlwapi')
+        if cc.links('''
+            #include <windows.h>
+            #include <shlwapi.h>
+            #include <stdlib.h>
+            int main()
+            {
+                MultiByteToWideChar (0, 0, NULL, 0, NULL, 0);
+                WideCharToMultiByte (0, 0, NULL, 0, NULL, 0, NULL, NULL);
+                PathCombineW(0,0,0);
+                return 0;
+            }''', name: 'Unicode functions working', dependencies: shlwapi_dep)
+            win32_wide_working = true
+        else
+            win32_winver_bump = true
+        endif
+
+        if not win32_wide_working and cc.links('''
+            #define WINVER 0x501
+            #define _WIN32_WINNT 0x501
+            #include <windows.h>
+            #include <shlwapi.h>
+            #include <stdlib.h>
+            int main()
+            {
+                MultiByteToWideChar (0, 0, NULL, 0, NULL, 0);
+                WideCharToMultiByte (0, 0, NULL, 0, NULL, 0, NULL, NULL);
+                PathCombineW(0,0,0);
+                return 0;
+            }''', name: 'Unicode functions working with WINVER bump', dependencies: shlwapi_dep)
+            win32_wide_working = true
+        endif
+
+        if win32_wide_working
+            compat_libs += [shlwapi_dep]
+            conf.set('WANT_WIN32_UNICODE', true)
+        else
+            error('Unicode support for Win32 not working')
+        endif
+    else
+        error('Unicode File Open for Win32 not available')
+    endif
+endif
