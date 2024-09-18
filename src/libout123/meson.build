@@ -40,7 +40,7 @@ libmodule = static_library(
     install: false
 )
 
-libout123_deps = [librt_dep, m_dep]
+libout123_deps = [librt_dep, m_dep, compat_libs]
 libout123_libs = [libmodule, libcompat]
 
 if conf.get('HAVE_MODULES', false)
@@ -54,6 +54,7 @@ if conf.get('NEED_MAINLIB', false) and build_libout123
     libout123 = library(
         'out123',
         libout123_sources,
+        include_directories: includes,
         dependencies: libout123_deps,
         link_with: libout123_libs,
         install: true

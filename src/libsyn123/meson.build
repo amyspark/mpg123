@@ -15,6 +15,7 @@ if build_libsyn123
             'filter.c',
             'sampleconv.c',
         ),
+        link_with: [libcompat_str],
         dependencies: [m_dep],
         include_directories: includes,
         install: true

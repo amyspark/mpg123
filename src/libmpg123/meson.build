@@ -7,11 +7,45 @@ if conf.get('HAVE_GETCPUFLAGS', false)
     )
 endif
 
-calctables = executable(
-    'calctables',
-    files('calctables.c', 'init_costabs.h', 'init_layer12.h', 'init_layer3.h'),
-    dependencies: m_dep,
-)
+# Uses VLA with specified dimensions in Y
+build_options = []
+if cc.compiles('''#include <stdint.h>
+    #include <stdio.h>
+    extern void print_array( int statick, int fixed, double fixed_scale
+    ,	const char *indent, const char *name
+    ,	size_t count, double tab[], int calc );
+    void print_array2d( int fixed, double fixed_scale
+    ,	const char *name, size_t x, size_t y
+    , double tab[][y], int calc )
+    {
+        if(calc)
+        {
+            if(!fixed)
+                printf("static ALIGNED(16) real %s[%zu][%zu];\n", name, x, y);
+            return;
+        }
+        printf( "static const%s real %s[%zu][%zu] = \n{\n", fixed ? "" : " ALIGNED(16)"
+        ,	name, x, y );
+        for(size_t i=0; i<x; ++i)
+        {
+            if(i)
+                printf(",");
+            print_array(1, fixed, fixed_scale, "\t", NULL, y, tab[i], calc);
+        }
+        printf("};\n");
+    }
+    int main()
+    {
+        return 0;
+    }''', name: 'tolerates VLA')
+    calctables = executable(
+        'calctables',
+        files('calctables.c', 'init_costabs.h', 'init_layer12.h', 'init_layer3.h'),
+        include_directories: includes,
+        dependencies: m_dep,
+        install: false
+    )
+endif
 
 if build_libmpg123
     libmpg123_sources = files(
@@ -415,6 +449,7 @@ if build_libmpg123
     # FIXME: port the module definition generator, and version info
     libmpg123 = library('mpg123',
         libmpg123_sources,
+        include_directories: includes,
         dependencies: [m_dep, network_deps, compat_libs],
         link_with: [libcompat],
         install: true,

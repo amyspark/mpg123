@@ -28,6 +28,7 @@ foreach mod : output_modules
                 'output_@0@'.format(mod),
                 mod_f,
                 c_args: libout123_mod_cppflags,
+                include_directories: includes,
                 link_with: libcompat_str,
                 dependencies: mod_dep,
                 install: true,
@@ -49,6 +50,7 @@ else
     libdefaultmodule = static_library(
         'defaultmodule',
         libdefaultmodule_sources,
+        include_directories: includes,
         dependencies: libdefaultmodule_deps,
         install: true,
         install_dir: get_option('libdir') / meson.project_name()

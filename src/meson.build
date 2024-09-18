@@ -1,4 +1,12 @@
+config_h = configure_file(
+    output: 'config.h',
+    configuration: conf
+)
+
 subdir('include')
+
+includes += include_directories('.')
+
 subdir('compat')
 subdir('common')
 if conf.get('NEED_LIB', false)
@@ -118,6 +126,7 @@ if build_programs
     out123 = executable(
         'out123',
         out123_sources,
+        include_directories: includes,
         link_with: [libcompat, libout123, libsyn123],
         install: true,
     )
@@ -125,6 +134,7 @@ if build_programs
         mpg123 = executable(
             'mpg123',
             mpg123_sources,
+            include_directories: includes,
             link_with: [libcompat, libmpg123],
             dependencies: mpg123_deps,
             install: true,
@@ -133,6 +143,7 @@ if build_programs
         mpg123_id3dump = executable(
             'mpg123-id3dump',
             mpg123_id3dump_sources,
+            include_directories: includes,
             link_with: [libcompat, libmpg123],
             install: true,
         )
@@ -140,6 +151,7 @@ if build_programs
         mpg123_strip = executable(
             'mpg123-strip',
             mpg123_strip_sources,
+            include_directories: includes,
             link_with: [libcompat, libmpg123],
             install: true,
         )

@@ -6,7 +6,7 @@ src_compat_libcompat_sources = files(
 )
 
 libcompat = static_library(
-    'libcompat',
+    'compat',
     src_compat_libcompat_sources,
     include_directories: includes,
     install: false,
@@ -20,7 +20,7 @@ src_compat_libcompat_str_sources = files(
 )
 
 libcompat_str = static_library(
-    'libcompat_str',
+    'compat_str',
     src_compat_libcompat_str_sources,
     include_directories: includes,
     install: false,
@@ -34,7 +34,7 @@ src_compat_libcompat_dl_sources = files(
 )
 
 libcompat_dl = static_library(
-    'libcompat_dl',
+    'compat_dl',
     src_compat_libcompat_dl_sources,
     link_with: libdl,
     include_directories: includes,

@@ -466,7 +466,12 @@ headers = [
     'netdb.h', 'sys/param.h', 'sys/socket.h', 'netinet/in.h', 'arpa/inet.h'
 ]
 foreach h : headers
-    conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), cc.has_header(h))
+    # FIXME: locale.h in compat_str.c
+    if h == 'locale.h'
+        conf.set10('HAVE_@0@'.format(h.to_upper().underscorify()), cc.has_header(h))
+    else
+        conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), cc.has_header(h))
+    endif
 endforeach
 
 network_internal = 'unknown'
@@ -546,29 +551,31 @@ conf.set('HAVE_FLOATDCT', true)
 
 more_sources = []
 if cpu == 'generic_dither'
-    add_project_arguments('-DOPT_GENERIC_DITHER -DREAL_IS_FLOAT', language: 'c')
+    add_project_arguments('-DOPT_GENERIC_DITHER', '-DREAL_IS_FLOAT', language: 'c')
+    more_sources = s_dither
     ccalign = false
 elif cpu == 'altivec'
-    add_project_arguments('-maltivec -DREAL_IS_FLOAT -DOPT_ALTIVEC', language: 'c')
+    add_project_arguments('-maltivec', '-DREAL_IS_FLOAT', '-DOPT_ALTIVEC', language: 'c')
     add_project_arguments(
         cc.get_supported_arguments('-faltivec'),
         language: 'c'
     )
     more_sources = s_altivec
 elif cpu == 'arm_fpu'
-    add_project_arguments('-DOPT_MULTI -DOPT_GENERIC -DOPT_GENERIC_DITHER -DOPT_NEON -DREAL_IS_FLOAT', language: 'c')
+    add_project_arguments(['-DOPT_MULTI', '-DOPT_GENERIC', '-DOPT_GENERIC_DITHER', '-DOPT_NEON', '-DREAL_IS_FLOAT'], language: 'c')
     more_sources = s_neon + s_dither + s_arm_multi
 elif cpu == 'aarch64'
-    add_project_arguments('-DOPT_MULTI -DOPT_GENERIC -DOPT_GENERIC_DITHER -DOPT_NEON64 -DREAL_IS_FLOAT', language: 'c')
+    add_project_arguments(['-DOPT_MULTI', '-DOPT_GENERIC', '-DOPT_GENERIC_DITHER', '-DOPT_NEON64', '-DREAL_IS_FLOAT'], language: 'c')
     more_sources = s_neon64 + s_dither + s_arm_multi
 elif cpu == 'x86'
-    add_project_arguments('-DOPT_MULTI -DOPT_GENERIC -DOPT_GENERIC_DITHER -DOPT_I386 -DOPT_I586 -DOPT_I586_DITHER -DOPT_MMX -DOPT_3DNOW -DOPT_3DNOW_VINTAGE -DOPT_3DNOWEXT -DOPT_3DNOWEXT_VINTAGE -DOPT_SSE -DOPT_SSE_VINTAGE -DREAL_IS_FLOAT', language: 'c')
+    add_project_arguments(['-DOPT_MULTI', '-DOPT_GENERIC', '-DOPT_GENERIC_DITHER', '-DOPT_I386', '-DOPT_I586', '-DOPT_I586_DITHER', '-DOPT_MMX', '-DOPT_3DNOW', '-DOPT_3DNOW_VINTAGE', '-DOPT_3DNOWEXT', '-DOPT_3DNOWEXT_VINTAGE', '-DOPT_SSE', '-DOPT_SSE_VINTAGE', '-DREAL_IS_FLOAT'], language: 'c')
     more_sources = s_i386 + s_i586 + s_i586d + s_mmx + s_3dnow_vintage + s_3dnowext_vintage + s_sse + s_x86multi + s_dither
 elif cpu == 'x86-64'
-    add_project_arguments('-DOPT_MULTI -DOPT_X86_64 -DOPT_GENERIC -DOPT_GENERIC_DITHER -DREAL_IS_FLOAT', language: 'c')
-    more_sources = '@0@ @1@ @2@'.format(s_x86_64, s_dither, s_arm_multi)
+    add_project_arguments(['-DOPT_MULTI', '-DOPT_X86_64', '-DOPT_GENERIC', '-DOPT_GENERIC_DITHER', '-DREAL_IS_FLOAT'], language: 'c')
+    more_sources = s_x86_64 + s_dither
     if avx_support
-        add_project_arguments('-DOPT_AVX')
+        more_sources += s_x86_64_avx
+        add_project_arguments('-DOPT_AVX', language: 'c')
     endif
 else
     error('Unknown CPU type @0@'.format(cpu))
@@ -836,7 +843,8 @@ endif
 
 # Setup the static build.
 conf.set('BUILD_@0@'.format(default_output_module.to_upper()), true)
-conf.set('DEFAULT_OUTPUT_MODULE', ','.join(default_output_modules))
+# FIXME: this doesn't make sense
+conf.set_quoted('DEFAULT_OUTPUT_MODULE', ','.join(default_output_modules))
 
 ############## Compiler Optimizations
 
@@ -929,6 +937,13 @@ if win32_specific_codes
         endif
     else
         error('Unicode File Open for Win32 not available')
+    endif
+
+    # Only implemented in the CMake port
+    if conf.get('WANT_WIN32_UNICODE', false)
+        conf.set('strcasecmp', '_stricmp')
+        conf.set('strncasecmp', '_strnicmp')
+        #endif
     endif
 
     #### Check for Network functions
@@ -1197,7 +1212,7 @@ summary({
     'runtime tables': runtimetables,
 }, section: 'Optimization detail')
 
-message('Disabling core features is not commonly done and some combinations might not build/work. If you encounter such a case, help yourself (and provide a patch) or just poke the maintainers."')
+message('Disabling core features is not commonly done and some combinations might not build/work. If you encounter such a case, help yourself (and provide a patch) or just poke the maintainers.')
 
 summary({
     'libsyn123 special cases': specialcases,
