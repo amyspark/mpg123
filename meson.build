@@ -17,7 +17,8 @@ conf.set_quoted('PACKAGE_NAME', meson.project_name())
 conf.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 librt_dep = cc.find_library('rt', required: false)
-conf.set('HAVE_CLOCK_GETTIME', cc.has_function('clock_gettime', dependencies: librt_dep))
+# NOTE: provided by winpthread, there's a fallback on out123 to Win32 APIs
+conf.set('HAVE_CLOCK_GETTIME', cc.has_function('clock_gettime', dependencies: librt_dep) and os != 'windows')
 
 modules = get_option('modules').enable_if(
     get_option('default_library') == 'shared'
@@ -76,18 +77,19 @@ else
     conf.set('HAVE_DLSYM', dlsym)
     conf.set('HAVE_DLCLOSE', dlclose)
     conf.set('HAVE_DLFCN_H', cc.has_header('dlfcn.h', dependencies: dep))
-
     modules = modules.enable_auto_if(dlopen and dlclose and dlsym)
-
     if modules.allowed()
-        message('We found a runtime loader: Modules enabled.')
         libdl = dep
-    else
-        warning('We did not find a runtime loader: Modules disabled.')
     endif
-    conf.set('USE_MODULES', modules.allowed())
-    conf.set_quoted('LT_MODULE_EXT', os == 'windows' ? '.dll' : '.so')
 endif
+
+if modules.allowed()
+    message('We found a runtime loader: Modules enabled.')
+else
+    warning('We did not find a runtime loader: Modules disabled.')
+endif
+conf.set('USE_MODULES', modules.allowed())
+conf.set_quoted('LT_MODULE_EXT', os == 'windows' ? '.dll' : '.so')
 
 build_programs = get_option('programs').allowed()
 build_libmpg123 = get_option('libmpg123').allowed()
