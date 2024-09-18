@@ -190,7 +190,9 @@ if cpu == 'generic_dither' and not cc.has_define('_MSC_VER')
         )
     elif meson_cpu == 'x86_64'
         cpu = 'x86-64'
-    elif meson_cpu == 'x86'
+    # NOTE: for Android see
+    # https://gitlab.freedesktop.org/gstreamer/cerbero/-/commit/3bfe13ba1a22237894c576f7998baf4ec9f3a10e
+    elif meson_cpu == 'x86' and not cc.has_define('__ANDROID__')
         cpu = 'x86'
         newoldwritesample = newoldwritesample.disable_auto_if(
             os in ['linux', 'darwin', 'ios'] or os.contains('bsd')
@@ -574,7 +576,9 @@ elif cpu == 'altivec'
     )
     more_sources = s_altivec
 elif cpu == 'arm_fpu'
-    add_project_arguments(['-DOPT_MULTI', '-DOPT_GENERIC', '-DOPT_GENERIC_DITHER', '-DOPT_NEON', '-DREAL_IS_FLOAT'], language: 'c')
+    # NOTE: for -marm see
+    # https://gitlab.freedesktop.org/gstreamer/cerbero/-/commit/3ac267f431af44bbdaa2e9e7404323edeace0750
+    add_project_arguments(['-marm', '-DOPT_MULTI', '-DOPT_GENERIC', '-DOPT_GENERIC_DITHER', '-DOPT_NEON', '-DREAL_IS_FLOAT'], language: 'c')
     more_sources = s_neon + s_dither + s_arm_multi
 elif cpu == 'aarch64'
     add_project_arguments(['-DOPT_MULTI', '-DOPT_GENERIC', '-DOPT_GENERIC_DITHER', '-DOPT_NEON64', '-DREAL_IS_FLOAT'], language: 'c')
