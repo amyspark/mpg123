@@ -43,4 +43,6 @@ if build_libsyn123
         dependencies: [m_dep],
         include_directories: includes,
     )
+else
+    libsyn123_dep = disabler()
 endif

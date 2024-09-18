@@ -83,4 +83,6 @@ if conf.get('NEED_MAINLIB', false) and build_libout123
         dependencies: libout123_deps,
         include_directories: includes,
     )
+else
+    libout123_dep = disabler()
 endif

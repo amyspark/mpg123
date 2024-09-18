@@ -478,4 +478,6 @@ if build_libmpg123
         dependencies: [m_dep, network_deps, compat_libs],
         include_directories: includes,
     )
+else
+    libmpg123_dep = disabler()
 endif
