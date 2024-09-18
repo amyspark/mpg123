@@ -3,10 +3,7 @@
 # If not, the library depends on the one builtin module from
 # the subdirectory.
 
-# For dynamic modules.
-if conf.get('HAVE_MODULES', false)
-    subdirectory('modules')
-endif
+subdirectory('modules')
 
 libout123_sources = files(
   'libout123.c',
@@ -29,7 +26,21 @@ if conf.get('BUILD_BUFFER', false)
     )
 endif
 
-libout123_deps = [libcompat, librt_dep, m_dep]
+libmodule_sources = files('module.h')
+if conf.get('HAVE_MODULES', false)
+    libmodule_sources += files('module.c')
+else
+    libmodule_sources += files('legacy_module.c')
+endif
+
+libmodule = static_library(
+    'module',
+    libmodule_sources,
+    include_directories: includes,
+    install: false
+)
+
+libout123_deps = [libmodule, libcompat, librt_dep, m_dep]
 
 if conf.get('HAVE_MODULES', false)
     libout123_deps += [libcompat_dl]
@@ -37,28 +48,12 @@ else
     libout123_deps += [libdefaultmodule]
 endif
 
-libout123_sources += files('module.h')
-
-if conf.get('HAVE_MODULES', false)
-    libout123_sources += files('module.c')
-else
-    libout123_sources += files('legacy_module.c')
-endif
-
-if conf.get('NEED_MAINLIB', false)
-    if build_libout123
-        # Just for libdefaultmodule.
-        if not conf.get('HAVE_MODULES', false)
-            subdirectory('modules')
-        endif
-
-        # build libout123
-        # FIXME: module definition file, version info
-        libout123 = library(
-            'libout123',
-            libout123_sources,
-            dependencies: libout123_deps, # FIXME: libs
-            install: true
-        )
-    endif
+if conf.get('NEED_MAINLIB', false) and build_libout123
+    # FIXME: module definition file, version info
+    libout123 = library(
+        'out123',
+        libout123_sources,
+        dependencies: libout123_deps, # FIXME: libs
+        install: true
+    )
 endif

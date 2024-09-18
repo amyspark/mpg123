@@ -20,11 +20,10 @@ option('layer1', type: 'feature', value: 'enabled', description: 'layer I decodi
 option('layer2', type: 'feature', value: 'enabled', description: 'layer II decoding')
 option('layer3', type: 'feature', value: 'enabled', description: 'layer III decoding')
 # FIXME: do we need extra options?
-option('audio', type: 'array', choices: ['dummy', 'alsa', 'tinyalsa', 'coreaudio', 'pulse', 'sdl', 'win32', 'win32_wasapi'], value: ['dummy'], description: 'audio output modules')
 option('seektable', type: 'integer', min: 0, max: 10000, value: 1000, description: 'size of seek index table (0 disables it)')
 option('portable', type: 'feature', value: 'disabled', description: 'only build portable API (no off_t, no internal I/O)')
 option('largefile', type: 'feature', value: 'auto', description: 'attempt to use 64 bit file offsets internally')
-option('with_audio', type: 'array', value: ['dummy'], description: 'Only build the given output modules')
+option('audio', type: 'array', choices: ['alsa', 'tinyalsa', 'dummy', 'jack', 'coreaudio', 'portaudio', 'pulse', 'sdl', 'sndio', 'win32', 'win32_wasapi', 'openal'], value: ['dummy'], description: 'audio output modules')
 option('with_default_audio', type: 'array', value: ['dummy'], description: 'Use these modules as the default output')
 option('ipv6', type: 'feature', value: 'auto', description: 'IPv6 support in internal network stack')
 option('network', type: 'combo', choices: ['auto', 'none', 'internal', 'wininethttp', 'exec'],  value: 'auto', description: 'Available options, depending on platform, are auto, none, internal, wininethttp, and exec (wget or curl binaries).\nThe internal code is always built in addition to external options for plain HTTP (esp. Shoutcast v1) support.\nThe external option is for HTTPS by default, but can be used for HTTP, too.')

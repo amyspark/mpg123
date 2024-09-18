@@ -596,7 +596,7 @@ conf.set('CCALIGN', ccalign)
 ############## Output module choice
 
 # The full list of supported modules to check, first come, first serve.
-check_modules = get_option('with_audio')
+check_modules = get_option('audio')
 output_modules = []
 check_forced = false
 
@@ -605,11 +605,13 @@ if check_modules != []
     check_forced = true
 else
     check_modules = [
-        'pulse', 'alsa', 'tinyalsa', 'oss', 'coreaudio', 'sndio', 'sun',
+        'pulse', 'alsa', 'tinyalsa', # 'oss',
+        'coreaudio', 'sndio', # 'sun',
         'win32', 'win32_wasapi', # 'os2', 'esd',
         'jack', 'portaudio', 'sdl', # 'nas', 'arts',
         'openal',
     ]
+    # NOTE: openal isn't declared in --with-audio -- amyspark
 endif
 
 # Dummy output module is always built alongside libout123, but not
@@ -622,20 +624,6 @@ foreach m : check_modules
     if m == 'dummy'
         output_modules += [m]
         conf.set('HAVE_@0@'.format(m.to_upper()), true)
-    elif m == 'oss'
-        headers = ['sys/soundcard.h', 'linux/soundcard.h', 'machine/soundcard.h']
-        check = false
-        foreach h : headers
-            v = cc.has_header(h)
-            conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), v)
-            check = check or v
-        endif
-        if check
-            output_modules += [m]
-            conf.set('HAVE_@0@'.format(m.to_upper()), true)
-        elif check_forced
-            error('A required header for @0@ is missing'.format(m))
-        endif
     elif m == 'tinyalsa'
         tinyalsa_dep = dependency('tinyalsa', required: check_forced)
         if cc.has_function('pcm_open',
@@ -645,14 +633,10 @@ foreach m : check_modules
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
         endif
     elif m == 'alsa'
-        if conf.get('HAVE_QSA', false)
-            conf.set('HAVE_ALSA', false)
-        else
-            alsa_dep = cc.find_library('asound', required: check_forced)
-            if cc.has_function('snd_pcm_open', prefix: '#include <alsa/asoundlib.h>', dependencies: alsa_dep, required: check_forced)
-                output_modules += [m]
-                conf.set('HAVE_@0@'.format(m.to_upper()), true)
-            endif
+        alsa_dep = cc.find_library('asound', required: check_forced)
+        if cc.has_function('snd_pcm_open', prefix: '#include <alsa/asoundlib.h>', dependencies: alsa_dep, required: check_forced)
+            output_modules += [m]
+            conf.set('HAVE_@0@'.format(m.to_upper()), true)
         endif
     elif m == 'jack'
         jack_dep = dependency('jack', required: check_forced)
