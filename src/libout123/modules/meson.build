@@ -28,7 +28,7 @@ foreach mod : output_modules
                 name_prefix: '',
                 name_suffix: module_suffix,
                 gnu_symbol_visibility: 'default',
-                install: true,
+                install: build_libout123,
                 install_dir: get_option('libdir') / meson.project_name()
             )
         endif
