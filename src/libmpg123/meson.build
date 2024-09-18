@@ -472,4 +472,9 @@ if build_libmpg123
         version: meson.project_version(),
         install: true,
     )
+
+    libmpg123_dep = declare_dependency(
+        link_with: libmpg123,
+        include_directories: includes,
+    )
 endif

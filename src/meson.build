@@ -77,8 +77,8 @@ mpg123_strip_sources = files(
   'getlopt.h',
 )
 
-mpg123_deps = []
-mpg123_libs = [libmpg123, libout123, libsyn123]
+mpg123_deps = [libmpg123_dep]
+mpg123_libs = [libout123, libsyn123]
 if conf.get('TERM_POSIX', false)
 mpg123_sources += files('term_posix.c')
 endif
@@ -135,7 +135,7 @@ if build_programs
             'mpg123',
             mpg123_sources,
             include_directories: includes,
-            link_with: [libcompat, libmpg123, libout123, libsyn123],
+            link_with: [libcompat, libout123, libsyn123],
             dependencies: mpg123_deps,
             install: true,
         )
@@ -144,7 +144,8 @@ if build_programs
             'mpg123-id3dump',
             mpg123_id3dump_sources,
             include_directories: includes,
-            link_with: [libcompat, libmpg123],
+            link_with: [libcompat],
+            dependencies: libmpg123_dep,
             install: true,
         )
 
@@ -152,7 +153,8 @@ if build_programs
             'mpg123-strip',
             mpg123_strip_sources,
             include_directories: includes,
-            link_with: [libcompat, libmpg123],
+            link_with: [libcompat],
+            dependencies: libmpg123_dep,
             install: true,
         )
     endif
