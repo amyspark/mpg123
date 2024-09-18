@@ -475,6 +475,7 @@ if build_libmpg123
 
     libmpg123_dep = declare_dependency(
         link_with: libmpg123,
+        dependencies: [m_dep, network_deps, compat_libs],
         include_directories: includes,
     )
 endif

@@ -77,4 +77,10 @@ if conf.get('NEED_MAINLIB', false) and build_libout123
         version: meson.project_version(),
         install: true
     )
+
+    libout123_dep = declare_dependency(
+        link_with: libout123,
+        dependencies: libout123_deps,
+        include_directories: includes,
+    )
 endif

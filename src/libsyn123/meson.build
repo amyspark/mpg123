@@ -37,4 +37,10 @@ if build_libsyn123
         version: meson.project_version(),
         install: true
     )
+
+    libsyn123_dep = declare_dependency(
+        link_with: libsyn123,
+        dependencies: [m_dep],
+        include_directories: includes,
+    )
 endif

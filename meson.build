@@ -1239,10 +1239,10 @@ summary({
 
 # FIXME implement if needed
 summary({
-    '8 bit integer': conf.get('NO_8BIT', false),
-    '16 bit integer': conf.get('NO_16BIT', false),
-    '32/24 bit integer': conf.get('NO_32BIT', false),
-    'real (32 bit float)': conf.get('NO_REAL', false),
+    '8 bit integer': not conf.get('NO_8BIT', false),
+    '16 bit integer': not conf.get('NO_16BIT', false),
+    '32/24 bit integer': not conf.get('NO_32BIT', false),
+    'real (32 bit float)': not conf.get('NO_REAL', false),
 }, section: 'Output formats (nofpu will disable all but 16 or 8 bit!)')
 
 summary({
