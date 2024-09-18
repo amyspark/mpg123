@@ -135,7 +135,7 @@ if build_programs
             'mpg123',
             mpg123_sources,
             include_directories: includes,
-            link_with: [libcompat, libmpg123],
+            link_with: [libcompat, libmpg123, libout123, libsyn123],
             dependencies: mpg123_deps,
             install: true,
         )

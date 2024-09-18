@@ -1,8 +1,6 @@
 project('mpg123', 'c',
   meson_version: '>= 1.3.0',
   license: 'LGPL2.1+',
-  # C11 is needed for Metal support
-  # Static libraries by default following upstream
   default_options: [ 'buildtype=debugoptimized', 'c_std=c99', 'default_library=shared', 'b_lundef=true'],
   version: '1.32.7',
 )
@@ -15,6 +13,8 @@ os = host_machine.system()
 meson_cpu = host_machine.cpu_family()
 
 conf = configuration_data()
+conf.set_quoted('PACKAGE_NAME', meson.project_name())
+conf.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 librt_dep = cc.find_library('rt', required: false)
 conf.set('HAVE_CLOCK_GETTIME', cc.has_function('clock_gettime', dependencies: librt_dep))
@@ -1024,7 +1024,8 @@ if win32_specific_codes
 
         have_mkfifo = win32_fifo_working
         if win32_fifo_working
-            conf.set('WANT_WIN32_FIFO', true)
+            # FIXME: control_generic.h
+            conf.set10('WANT_WIN32_FIFO', true)
         else
             error('Unicode support for Win32 not working')
         endif
