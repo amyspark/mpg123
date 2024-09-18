@@ -1089,6 +1089,14 @@ conf.set('NET123_EXEC', network_type == 'exec')
 conf.set('NET123_WINHTTP', network_type == 'wininethttp') # or winhttp
 conf.set('NET123_WININET', network_type == 'wininethttp') # or wininet
 
+## FIXME: MSVC doesn't define WINBOOL, it looks like an
+## historical artifact? -amyspark
+if conf.get('NET123_WINHTTP', false) or conf.get('NET123_WININET', false)
+    if not cc.has_type('WINBOOL', prefix: '#include <minwindef.h>')
+    conf.set('WINBOOL', 'BOOL')
+    endif
+endif
+
 ############## Terminal choice
 
 conf.set('TERM_POSIX', term_type == 'posix')
