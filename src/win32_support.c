@@ -4,6 +4,12 @@
 
 #ifdef WANT_WIN32_UNICODE
 
+// This can be used from XP onwards (GetCommandLineW)
+#if defined(_UCRT) || WINVER >= 0x501
+#include <windows.h>
+#include <shellapi.h>
+#define USE_COMPLIANT_ARGV
+#else
 /* Obscure and undocumented call from MS C Runtime "MSVCRT.DLL" */
 typedef struct
 {
@@ -11,27 +17,36 @@ typedef struct
 } _startupinfo;
 
 /* XP and later has an int return though */
-void __cdecl __declspec(dllimport) __wgetmainargs (
+void __wgetmainargs (
 	int *_Argc,
 	wchar_t ***_Argv,
 	wchar_t ***_Env,
 	int _DoWildCard,
 	_startupinfo * _StartInfo
 );
+#endif
 
 int win32_cmdline_utf8(int * argc, char *** argv)
 {
 	int argcounter;
 	wchar_t **argv_wide;
+#ifndef USE_COMPLIANT_ARGV
 	wchar_t **env;
+#endif
 	char *argvptr;
+#ifndef USE_COMPLIANT_ARGV
 	_startupinfo startup;
+#endif
 
 	/* That's too lame. */
 	if(argv == NULL || argc == NULL) return -1;
 
+#ifdef USE_COMPLIANT_ARGV
+	argv_wide = CommandLineToArgvW(GetCommandLineW(), argc);
+#else
 	startup.newmode = 0;
 	__wgetmainargs(argc, &argv_wide,&env,1, &startup);
+#endif
 	*argv = (char **)calloc(sizeof (char *), *argc);
 	if(*argv == NULL){ error("Cannot allocate memory for command line."); return -1; }
 
