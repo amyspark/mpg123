@@ -29,7 +29,7 @@ foreach mod : output_modules
                 name_suffix: module_suffix,
                 gnu_symbol_visibility: 'default',
                 install: true,
-                install_dir: conf.get('PKGLIBDIR')
+                install_dir: get_option('libdir') / meson.project_name()
             )
         endif
     else
