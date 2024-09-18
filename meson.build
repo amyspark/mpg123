@@ -1183,18 +1183,21 @@ if conf.get('NEED_MAINLIB', false)
     # Pkg-config files and library includes.
     if build_libmpg123
         pkg.generate(libmpg123,
+            name: 'libmpg123',
             description: 'An optimised MPEG Audio decoder',
             version: meson.project_version(),
         )
     endif
     if build_libout123
         pkg.generate(libout123,
+            name: 'libout123',
             description: 'A streaming audio output API derived from mpg123',
             version: meson.project_version(),
         )
     endif
     if build_libsyn123
         pkg.generate(libsyn123,
+            name: 'libsyn123',
             description: 'A signal synthesis library accompanying mpg123',
             version: meson.project_version(),
         )
