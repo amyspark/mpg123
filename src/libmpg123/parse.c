@@ -11,8 +11,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "getbits.h"
-
 #if defined (WANT_WIN32_SOCKETS)
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -30,7 +28,7 @@
 
 #include "mpeghead.h"
 
-#include "../common/debug.h"
+#include "getbits.h"
 
 #define bsbufid(fr) (fr)->bsbuf==(fr)->bsspace[0] ? 0 : ((fr)->bsbuf==fr->bsspace[1] ? 1 : ( (fr)->bsbuf==(fr)->bsspace[0]+512 ? 2 : ((fr)->bsbuf==fr->bsspace[1]+512 ? 3 : -1) ) )
 
