@@ -2,6 +2,7 @@ if conf.get('HAVE_GETCPUFLAGS', false)
     testcpu = executable(
         'testcpu',
         files('testcpu.c', 'getcpuflags.S'),
+        include_directories: includes,
         link_with: [libcompat],
         install: false,
     )
@@ -215,7 +216,7 @@ if build_libmpg123
 
     if conf.get('HAVE_SSE_VINTAGE', false)
     if conf.get('HAVE_SYNTHREAL', false)
-        libmpg123_sources += files('synth_sse_float.S synth_stereo_sse_float.S')
+        libmpg123_sources += files('synth_sse_float.S', 'synth_stereo_sse_float.S')
     endif
     endif
 
@@ -335,7 +336,7 @@ if build_libmpg123
 
     if conf.get('HAVE_AVX', false)
     if not conf.get('HAVE_ACCURATE', false)
-        libmpg123_sources += files('dct64_avx.S synth_stereo_avx.S')
+        libmpg123_sources += files('dct64_avx.S', 'synth_stereo_avx.S')
     endif
     endif
 

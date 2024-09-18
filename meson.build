@@ -166,6 +166,7 @@ new_huffman = get_option('new-huffman')
 conf.set('USE_NEW_HUFFTABLE', new_huffman.allowed())
 int_quality = get_option('int-quality')
 conf.set('ACCURATE_ROUNDING', int_quality.allowed())
+conf.set('HAVE_ACCURATE', int_quality.allowed())
 # FIXME: depths: int16, int8, int32, real
 # FIXME: equalizer
 # FIXME: I'm not letting IEEE 754 be disabled
@@ -175,7 +176,8 @@ conf.set('SYN123_NO_CASES', not specialcases.allowed())
 
 cpu = get_option('cpu')
 newoldwritesample = get_option('newoldwritesample')
-if cpu == 'generic_fpu'
+# The optimizations are written in GAS assembler --amyspark
+if cpu == 'generic_dither' and not cc.has_define('_MSC_VER')
     if meson_cpu == 'aarch64'
         cpu = 'aarch64'
         newoldwritesample = newoldwritesample.enable_auto_if(
@@ -198,7 +200,6 @@ if cpu == 'generic_fpu'
     else
         add_project_arguments('-DGENERIC', language: 'c')
     endif
-    newoldwritesample = newoldwritesample.disable_auto_if(cpu == 'generic_fpu')
 endif
 
 buffer = get_option('buffer')
@@ -234,14 +235,15 @@ else
     conf.set('ASMALIGN_BYTE', true)
 endif
 
-conf.set('CCALIGN', cc.compiles('int main() { __attribute__((aligned(16))) float var; return 0; }', name: 'align(16) is supported'))
+ccalign = cc.compiles('int main() { __attribute__((aligned(16))) float var; return 0; }', name: 'align(16) is supported')
 
 avx_support = false
 check_yasm = false
-if cpu.contains('x86')
+if cpu.contains('x86') and not cc.has_define('_MSC_VER')
     check = '.text\nvaddps %ymm0,%ymm0,%ymm0\n'
+    python3 = import('python').find_installation()
     f = configure_file(
-        command: [python3, '-c', 'import sys; print(sys.argv[1])', '@0@'.format(check[0])],
+            command: [python3, '-c', 'import sys; print(sys.argv[1])', '@0@'.format(check)],
         input: 'configure',
         output: '@0@.asm'.format(check[1]),
         capture: true,
@@ -253,7 +255,7 @@ if cpu.contains('x86')
     )
 
     if not avx_support
-        check_yasm = add_languages('nasm', required: false)
+        check_yasm = add_languages('nasm', required: false, native: false)
         if check_yasm
             x86asm = meson.get_compiler('nasm')
 
@@ -261,7 +263,7 @@ if cpu.contains('x86')
                 args: ['-pgas', '-rcpp'],
                 name: 'NASM supports GAS syntax and AVX instructions',
             )
-                add_project_arguments('-pgas -rcpp', language: 'nasm')
+                add_project_arguments(['-pgas', '-rcpp'], language: 'nasm')
                 avx_support = true
             endif
         endif
@@ -582,7 +584,7 @@ elif cpu == 'x86'
     more_sources = s_i386 + s_i586 + s_i586d + s_mmx + s_3dnow_vintage + s_3dnowext_vintage + s_sse + s_x86multi + s_dither
 elif cpu == 'x86-64'
     add_project_arguments(['-DOPT_MULTI', '-DOPT_X86_64', '-DOPT_GENERIC', '-DOPT_GENERIC_DITHER', '-DREAL_IS_FLOAT'], language: 'c')
-    more_sources = s_x86_64 + s_dither
+    more_sources = s_x86_64 + s_dither + s_x86_64_multi
     if avx_support
         more_sources += s_x86_64_avx
         add_project_arguments('-DOPT_AVX', language: 'c')
