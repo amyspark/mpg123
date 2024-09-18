@@ -2,9 +2,9 @@
 #include "version.h"
 #include "net123.h"
 #include "compat/compat.h"
-#include "common/debug.h"
 #include <ws2tcpip.h>
 #include <wininet.h>
+#include "common/debug.h"
 
 // The network implementation defines the struct for private use.
 // The purpose is just to keep enough context to be able to
