@@ -1,11 +1,11 @@
-subdirectory('include')
-subdirectory('compat')
-subdirectory('common')
+subdir('include')
+subdir('compat')
+subdir('common')
 if conf.get('NEED_LIB', false)
-    subdirectory('libout123')
+    subdir('libout123')
     if conf.get('NEED_MAINLIB', false)
-        subdirectory('libmpg123')
-        subdirectory('libsyn123')
+        subdir('libmpg123')
+        subdir('libsyn123')
     endif
 endif
 
@@ -54,7 +54,7 @@ out123_sources = files(
     'filters.c',
     'out123.c',
     'mpg123app.h',
-    'win32_support.h,
+    'win32_support.h',
 )
 
 mpg123_id3dump_sources = files(
@@ -69,7 +69,8 @@ mpg123_strip_sources = files(
   'getlopt.h',
 )
 
-mpg123_deps = [libmpg123_dep, libout123_dep, libsyn123_dep]
+mpg123_deps = []
+mpg123_libs = [libmpg123, libout123, libsyn123]
 if conf.get('TERM_POSIX', false)
 mpg123_sources += files('term_posix.c')
 endif
@@ -100,10 +101,10 @@ mpg123_sources += files('net123_wininet.c')
 mpg123_deps += [cc.find_library('wininet', required: true)]
 endif
 
-if WIN32_CODES
+if conf.get('WIN32_CODES', false)
 mpg123_sources += files('win32_support.c')
 
-if NETWORK_WINSOCK
+if conf.get('NETWORK_WINSOCK', false)
 mpg123_sources += files('win32_net.c')
 mpg123_deps += [cc.find_library('ws2_32', required: true)]
 endif
@@ -117,15 +118,14 @@ if build_programs
     out123 = executable(
         'out123',
         out123_sources,
-        objects: [libcompat],
-        dependencies: [libout123_dep, libsyn123_dep],
+        link_with: [libcompat, libout123, libsyn123],
         install: true,
     )
     if conf.get('HAVE_LFS_WRAP', false)
         mpg123 = executable(
             'mpg123',
             mpg123_sources,
-            objects: [libcompat],
+            link_with: [libcompat, libmpg123],
             dependencies: mpg123_deps,
             install: true,
         )
@@ -133,16 +133,14 @@ if build_programs
         mpg123_id3dump = executable(
             'mpg123-id3dump',
             mpg123_id3dump_sources,
-            objects: [libcompat],
-            dependencies: [libmpg123_dep],
+            link_with: [libcompat, libmpg123],
             install: true,
         )
 
         mpg123_strip = executable(
             'mpg123-strip',
             mpg123_strip_sources,
-            objects: [libcompat],
-            dependencies: [libmpg123_dep],
+            link_with: [libcompat, libmpg123],
             install: true,
         )
     endif

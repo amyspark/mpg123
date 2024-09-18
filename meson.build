@@ -41,7 +41,7 @@ conf.set('WINDOWS_UWP', uwp_build)
 
 android_build = os == 'android'
 
-if os in ['windows', 'cygwin'] and modules and win32_specific_codes
+if os in ['windows', 'cygwin'] and modules.allowed() and win32_specific_codes
     modules.enable_auto_if(
         cc.has_function('GetThreadErrorMode', prefix: '#include <windows.h>')
     )
@@ -50,10 +50,10 @@ endif
 
 deps = []
 libdl = []
-if not modules
+if modules.disabled()
     message('Modules disabled, not checking for dynamic loading.')
 elif os in ['windows', 'cygwin']
-    modules.enable_auto_if(
+    modules = modules.enable_auto_if(
         cc.compiles('''
             #include <windows.h>
 
@@ -89,11 +89,11 @@ else
     conf.set_quoted('LT_MODULE_EXT', os == 'windows' ? '.dll' : '.so')
 endif
 
-build_programs = get_option('programs')
-build_libmpg123 = get_option('libmpg123')
-build_libout123 = get_option('libout123')
-build_libout123_modules = get_option('libout123-modules')
-build_libsyn123 = get_option('libsyn123')
+build_programs = get_option('programs').allowed()
+build_libmpg123 = get_option('libmpg123').allowed()
+build_libout123 = get_option('libout123').allowed()
+build_libout123_modules = get_option('libout123-modules').allowed()
+build_libsyn123 = get_option('libsyn123').allowed()
 
 conf.set('BUILD_PROGRAMS', build_programs)
 conf.set('BUILD_LIBMPG123', build_libmpg123)
@@ -107,20 +107,20 @@ conf.set('NEED_MAINLIB', build_libmpg123 or build_libout123 or build_libsyn123)
 
 components = []
 
-if build_programs.allowed()
+if build_programs
     components += ['programs']
 endif
 
-if build_libmpg123.allowed()
+if build_libmpg123
     components += ['libmpg123']
 endif
-if build_libout123.allowed()
+if build_libout123
     components += ['libout123']
 endif
-if build_libout123_modules.allowed()
+if build_libout123_modules
     components += ['libout123-modules']
 endif
-if build_libsyn123.allowed()
+if build_libsyn123
     components += ['libsyn123']
 endif
 
@@ -230,7 +230,7 @@ conf.set('CCALIGN', cc.compiles('int main() { __attribute__((aligned(16))) float
 
 avx_support = false
 check_yasm = false
-if cpu_type.contains('x86')
+if cpu.contains('x86')
     check = '.text\nvaddps %ymm0,%ymm0,%ymm0\n'
     f = configure_file(
         command: [python3, '-c', 'import sys; print(sys.argv[1])', '@0@'.format(check[0])],
@@ -294,22 +294,19 @@ switched_off_size = cc.sizeof('off_t',
         #undef  _FILE_OFFSET_BITS
         #define _FILE_OFFSET_BITS 64
         #include <sys/types.h>
-    ''',
-    name: 'switched off_t size'
+    '''
 )
 unswitched_off_size = cc.sizeof('off_t',
     prefix: '''
         #undef  _FILE_OFFSET_BITS
         #include <sys/types.h>
-    ''',
-    name: 'unswitched off_t size'
+    '''
 )
 # Now the size without meddling, possibly enforced to 64 bits by system settings.
 sizeof_off_t = cc.sizeof('off_t',
     prefix: '''
         #include <sys/types.h>
-    ''',
-    name: 'off_t size'
+    '''
 )
 conf.set('SIZEOF_OFF_T', sizeof_off_t)
 # Some paranoia about the limited choices we accept.
@@ -372,26 +369,21 @@ conf.set('HAVE_MMAP', have_mmap)
 if not have_mmap
     headers = ['sys/ipc.h', 'sys/shm.h']
     funcs = ['shmget', 'shmat', 'shmdt', 'shmctl']
-    buffer = true
     foreach h : headers
         v = cc.has_header(h)
         conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), v)
-        if not v
-            buffer = false
-        endif
+        buffer = buffer.disable_auto_if(not v)
     endforeach
     foreach f : funcs
-        v = cc.function(h)
+        v = cc.has_function(f)
         conf.set('HAVE_@0@'.format(f.to_upper().underscorify()), v)
-        if not v
-            buffer = false
-        endif
-    endif
+        buffer = buffer.disable_auto_if(not v)
+    endforeach
 endif
 
 # Check if system supports termios
 posix_termios = cc.has_header('termios.h')
-header_wincon_h = cc.has_header_symbol('ReadConsoleInput', prefix: '''
+header_wincon_h = cc.has_function('ReadConsoleInput', prefix: '''
 #include <windows.h>
 #include <wincon.h>
 ''')
@@ -418,15 +410,27 @@ funcs = [
 ]
 foreach f : funcs
     conf.set('HAVE_@0@'.format(f.to_upper()), cc.has_function(f))
-endif
+endforeach
 
 have_mkfifo = conf.get('HAVE_MKFIFO')
 have_fork = conf.get('HAVE_FORK') and conf.get('HAVE_EXECVP')
+
+if not cc.has_define('STDIN_FILENO', prefix: '#include <stdio.h>')
+    conf.set('STDIN_FILENO', '(_fileno(stdin))')
+    conf.set('STDOUT_FILENO', '(_fileno(stdout))')
+    conf.set('STDERR_FILENO', '(_fileno(stderr))')
+endif
 
 conf.set('HAVE__SETMODE', cc.compiles('''
 #include <io.h>
 #include <fcntl.h>
 #include <stdio.h>
+
+#ifndef STDIN_FILENO
+#define STDIN_FILENO (_fileno(stdin))
+#define STDOUT_FILENO (_fileno(stdout))
+#define STDERR_FILENO (_fileno(stderr))
+#endif
 
 int main()
 {
@@ -440,6 +444,12 @@ conf.set('HAVE_SETMODE', cc.compiles('''
 #include <io.h>
 #include <fcntl.h>
 #include <stdio.h>
+
+#ifndef STDIN_FILENO
+#define STDIN_FILENO (_fileno(stdin))
+#define STDOUT_FILENO (_fileno(stdout))
+#define STDERR_FILENO (_fileno(stderr))
+#endif
 
 int main()
 {
@@ -456,8 +466,8 @@ headers = [
     'netdb.h', 'sys/param.h', 'sys/socket.h', 'netinet/in.h', 'arpa/inet.h'
 ]
 foreach h : headers
-    conf.set('HAVE_@0@'.format(f.to_upper().underscorify()), cc.has_header(f))
-endif
+    conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), cc.has_header(h))
+endforeach
 
 network_internal = 'unknown'
 have_network = false
@@ -466,34 +476,34 @@ if conf.get('HAVE_NETDB_H') and conf.get('HAVE_SYS_PARAM_H') and conf.get('HAVE_
     have_network = true
 endif
 
-
-if not cc.has_function('gethostbyname', dependencies: [])
-    network_deps = [
-        cc.find_library('nsl'),
-        cc.find_library('socket'),
-        cc.find_library('network')
+network_deps = []
+if not cc.has_function('gethostbyname')
+    deps = [
+        cc.find_library('nsl', required: false),
+        cc.find_library('socket', required: false),
+        cc.find_library('network', required: false)
     ]
-    foreach dep : network_deps
+    foreach dep : deps
         if cc.has_function('gethostbyname', dependencies: dep)
-            deps += [dep]
+            network_deps += [dep]
             break
         endif
+    endforeach
+endif
+
+if not cc.has_function('socket', dependencies: network_deps)
+    dep = cc.find_library('socket', required: false)
+    if cc.has_function('socket', dependencies: dep)
+        network_deps += [dep]
     endif
 endif
 
-if not cc.has_function('socket', dependencies: [])
-    dep = cc.find_library('socket')
-    if cc.has_function('gethostbyname', dependencies: dep)
-        deps += [dep]
-    endif
-endif
-
-conf.set('HAVE_GETADDRINFO', cc.has_function('getaddrinfo', dependencies: deps))
+conf.set('HAVE_GETADDRINFO', cc.has_function('getaddrinfo', dependencies: network_deps))
 have_ipv6 = conf.get('HAVE_GETADDRINFO')
 
 m_dep = [cc.find_library('m', required: false), cc.find_library('mx', required: false)]
-cc.has_function('sqrt', deps: m_dep, required: true)
-cc.has_function('powf', deps: m_dep, required: true)
+cc.has_function('sqrt', dependencies: m_dep, required: true)
+cc.has_function('powf', dependencies: m_dep, required: true)
 
 conf.set('HAVE_BYTESWAP_H', cc.has_header('byteswap.h'))
 
@@ -534,7 +544,7 @@ s_arm = ['HAVE_ARM']
 # See earlier fixme -- int32 and real are forcibly allowed
 conf.set('HAVE_FLOATDCT', true)
 
-more_sources=""
+more_sources = []
 if cpu == 'generic_dither'
     add_project_arguments('-DOPT_GENERIC_DITHER -DREAL_IS_FLOAT', language: 'c')
     ccalign = false
@@ -678,7 +688,7 @@ foreach m : check_modules
         endif
     elif m == 'win32_wasapi'
         win32_wasapi_dep = [
-            cc.find_library('ole32', required: check_forced)
+            cc.find_library('ole32', required: check_forced),
             cc.find_library('avrt', required: check_forced)
         ]
         if cc.compiles('''
@@ -698,9 +708,12 @@ foreach m : check_modules
                 };
                 return 0;
             }
-            ''', name: 'we have wasapi headers', dependencies: win32_wasapi_dep, required: check_forced)
+            ''', name: 'we have WASAPI headers', dependencies: win32_wasapi_dep)
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
+        elif check_forced
+            # FIXME supported in Meson 1.5+
+            error('A required check for @0@ failed'.format(m))
         endif
     elif m == 'sndio'
         sndio_dep = dependency('sndio', required: check_forced)
@@ -724,7 +737,7 @@ foreach m : check_modules
         endif
     elif m == 'coreaudio'
         coreaudio_dep = [
-            dependency('appleframeworks', modules : 'AudioToolbox', required: true)
+            dependency('appleframeworks', modules : 'AudioToolbox', required: check_forced)
         ]
         headers = ['AudioUnit/AudioUnit.h', 'AudioToolbox/AudioToolbox.h']
         check = true
@@ -743,7 +756,7 @@ foreach m : check_modules
                 }
             ''', name: 'if AudioUnit functions are available within AudioToolbox')
                 coreaudio_dep += [
-                    dependency('appleframeworks', modules : 'AudioUnit', required: true)
+                    dependency('appleframeworks', modules : 'AudioUnit', required: check_forced)
                 ]
             endif
             headers = ['CoreServices/CoreServices.h']
@@ -765,7 +778,7 @@ foreach m : check_modules
         openal_dep = dependency('appleframeworks', modules : 'OpenAL', required: false)
         headers = ['OpenAL/al.h', 'OpenAL/alc.h', 'AL/al.h', 'AL/alc.h', 'al.h', 'alc.h']
         if not openal_dep.found()
-            openal_dep = dependency('openal', required: true)
+            openal_dep = dependency('openal', required: check_forced)
         endif
         foreach h : headers
             v = cc.has_header(h, dependencies: openal_dep)
@@ -823,19 +836,19 @@ endif
 
 # Setup the static build.
 conf.set('BUILD_@0@'.format(default_output_module.to_upper()), true)
-conf.set('DEFAULT_OUTPUT_MODULE', default_output_modules.join(','))
+conf.set('DEFAULT_OUTPUT_MODULE', ','.join(default_output_modules))
 
 ############## Compiler Optimizations
 
 conf.set('BUILD_BUFFER', buffer.allowed())
-if build.disabled()
+if buffer.disabled()
     add_project_arguments('-DNOXFERMEM', language: 'c')
 endif
 if newoldwritesample.allowed()
     add_project_arguments('-DNEWOLD_WRITE_SAMPLE', language: 'c')
 endif
 
-if get_option('optimization') >= 2
+if get_option('optimization').version_compare('>= 2')
     add_project_arguments(
         cc.get_supported_arguments([
             '-fomit-frame-pointer', '-funroll-all-loops', '-finline-functions', '-ffast-math',
@@ -968,7 +981,6 @@ if win32_specific_codes
 
     #### Check for Win32 Named Pipe functions
     win32_fifo_working = false
-    winver = ""
     if fifo.allowed()
         if cc.links('''
             #include <windows.h>
@@ -1022,6 +1034,8 @@ if not eoverflow_present
     conf.set('EOVERFLOW', 'EFBIG')
 endif
 
+conf.set('WIN32_CODES', win32_specific_codes)
+
 ipv6 = get_option('ipv6')
 
 # make it clear that auto is the default for both enable and with options.
@@ -1042,12 +1056,8 @@ endif
 if network_type == 'exec' and have_fork
   error('exec network support selected but fork not available')
 endif
-if network_type == 'wininethttp' and win32_specific_codes
-  error('wininet or winhttp is currently only for Windows')
-endif
 
 #### Use Win32 support codes
-win32_codes = win32_specific_codes
 
 ipv6 = ipv6.require(have_ipv6 and network_type != 'disabled')
 
@@ -1096,7 +1106,7 @@ endif
 
 ############## Library cleanup
 
-subdirectory('src')
+subdir('src')
 
 ############## Final Output
 
@@ -1124,14 +1134,14 @@ if conf.get('NEED_MAINLIB', false)
     endif
 endif
 
-subdirectory('man1')
+subdir('man1')
 
 ############## Display Message
 
 summary({
     'Install path': get_option('prefix'),
     'Components': components,
-    'CPU optimization': cpu_type,
+    'CPU optimization': cpu,
     'Compiler Optimization': get_option('optimization'),
     'Use yasm (for AVX only)': get_variable('check_yasm', false),
     'Gapless Support': conf.get('GAPLESS', false),
@@ -1169,7 +1179,7 @@ summary({
     'Win32 Unicode File Open.': win32_unicode,
     'Feature Report Function.': conf.get('HAVE_FEATURE', false),
     'Equalizer': equalizer,
-}, name: 'Core libmpg123 features')
+}, section: 'Core libmpg123 features')
 
 # FIXME implement if needed
 summary({
@@ -1177,7 +1187,7 @@ summary({
     '16 bit integer': conf.get('NO_16BIT', false),
     '32/24 bit integer': conf.get('NO_32BIT', false),
     'real (32 bit float)': conf.get('NO_REAL', false),
-}, name: 'Output formats (nofpu will disable all but 16 or 8 bit!)')
+}, section: 'Output formats (nofpu will disable all but 16 or 8 bit!)')
 
 summary({
     'Integer conversion': int_quality,
@@ -1185,7 +1195,7 @@ summary({
     'New/old WRITE_SAMPLE': newoldwritesample,
     'new Huffman scheme': new_huffman,
     'runtime tables': runtimetables,
-}, name: 'Optimization detail')
+}, section: 'Optimization detail')
 
 message('Disabling core features is not commonly done and some combinations might not build/work. If you encounter such a case, help yourself (and provide a patch) or just poke the maintainers."')
 

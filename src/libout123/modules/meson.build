@@ -1,7 +1,7 @@
 # Do not include uneeded headers from mpg123app.h .
 libout123_mod_cppflags = ['-DBUILDING_OUTPUT_MODULES=1']
 
-modules = [
+__modules = [
     ['output_dummy', 'HAVE_DUMMY', files('dummy.c'), []],
     ['output_tinyalsa', 'HAVE_TINYALSA', files('tinyalsa.c'), tinyalsa_dep],
     ['output_alsa', 'HAVE_ALSA', files('alsa.c'), alsa_dep],
@@ -20,7 +20,7 @@ foreach mod : output_modules
     mod_f = files(
         '@0@.c'.format(mod)
     )
-    mod_dep = get_variable('@0@_dep'.format(mod))
+    mod_dep = get_variable('@0@_dep'.format(mod), [])
     if conf.get('HAVE_MODULES', false)
         have = 'HAVE_@0@'.format(mod.to_upper())
         if conf.get('BUILD_LIBOUT123_MODULES', false) and conf.get(have, false)
@@ -37,8 +37,8 @@ foreach mod : output_modules
     else
         have = 'BUILD_@0@'.format(mod.to_upper())
         if conf.get(have, false)
-            libdefaultmodule_sources += mod_f,
-            libdefaultmodules_deps += mod_dep
+            libdefaultmodule_sources = mod_f
+            libdefaultmodule_deps = mod_dep
         endif
     endif
 endforeach
@@ -49,8 +49,7 @@ else
     libdefaultmodule = static_library(
         'defaultmodule',
         libdefaultmodule_sources,
-        c_args: libdefaultmodule_flags,
-        dependencies: libdefaultmodules_deps,
+        dependencies: libdefaultmodule_deps,
         install: true,
         install_dir: get_option('libdir') / meson.project_name()
     )

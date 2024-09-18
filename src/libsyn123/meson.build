@@ -14,7 +14,7 @@ if build_libsyn123
             'resample.c',
             'filter.c',
             'sampleconv.c',
-        )
+        ),
         dependencies: [m_dep],
         include_directories: includes,
         install: true

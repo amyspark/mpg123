@@ -3,7 +3,7 @@
 # If not, the library depends on the one builtin module from
 # the subdirectory.
 
-subdirectory('modules')
+subdir('modules')
 
 libout123_sources = files(
   'libout123.c',
@@ -40,12 +40,13 @@ libmodule = static_library(
     install: false
 )
 
-libout123_deps = [libmodule, libcompat, librt_dep, m_dep]
+libout123_deps = [librt_dep, m_dep]
+libout123_libs = [libmodule, libcompat]
 
 if conf.get('HAVE_MODULES', false)
-    libout123_deps += [libcompat_dl]
+    libout123_libs += [libcompat_dl]
 else
-    libout123_deps += [libdefaultmodule]
+    libout123_libs += [libdefaultmodule]
 endif
 
 if conf.get('NEED_MAINLIB', false) and build_libout123
@@ -53,7 +54,8 @@ if conf.get('NEED_MAINLIB', false) and build_libout123
     libout123 = library(
         'out123',
         libout123_sources,
-        dependencies: libout123_deps, # FIXME: libs
+        dependencies: libout123_deps,
+        link_with: libout123_libs,
         install: true
     )
 endif

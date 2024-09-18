@@ -34,7 +34,7 @@ src_compat_libcompat_dl_sources = files(
 )
 
 libcompat_dl = static_library(
-    'libcompat_str',
+    'libcompat_dl',
     src_compat_libcompat_dl_sources,
     link_with: libdl,
     include_directories: includes,

@@ -1,9 +1,11 @@
-testcpu = executable(
-    'testcpu',
-    files('testcpu.c'),
-    link_with: [libcompat, getcpuflags],
-    install: false,
-)
+if conf.get('HAVE_GETCPUFLAGS', false)
+    testcpu = executable(
+        'testcpu',
+        files('testcpu.c', 'getcpuflags.S'),
+        link_with: [libcompat],
+        install: false,
+    )
+endif
 
 calctables = executable(
     'calctables',
@@ -46,7 +48,7 @@ if build_libmpg123
         'mangle.h',
         'getcpuflags.h',
         'index.h',
-        'index.c,
+        'index.c',
     )
 
     if conf.get('HAVE_LAYER1', false)
@@ -413,8 +415,8 @@ if build_libmpg123
     # FIXME: port the module definition generator, and version info
     libmpg123 = library('mpg123',
         libmpg123_sources,
-        objects: libcompat,
-        dependencies: m_dep,
-        link_with: compat_libs,
+        dependencies: [m_dep, network_deps, compat_libs],
+        link_with: [libcompat],
+        install: true,
     )
 endif
