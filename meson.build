@@ -43,8 +43,8 @@ conf.set('WINDOWS_UWP', uwp_build)
 android_build = os == 'android'
 
 if os in ['windows', 'cygwin'] and modules.allowed() and win32_specific_codes
-    modules.enable_auto_if(
-        cc.has_function('GetThreadErrorMode', prefix: '#include <windows.h>')
+    modules = modules.disable_auto_if(
+        not cc.has_function('GetThreadErrorMode', prefix: '#include <windows.h>')
     )
 endif
 
@@ -54,14 +54,18 @@ libdl = []
 if modules.disabled()
     message('Modules disabled, not checking for dynamic loading.')
 elif os in ['windows', 'cygwin']
+    # NOTE: Because it needs declspec --amyspark
+    modules = modules.disable_auto_if(
+        cc.has_define('_MSC_VER')
+    )
     modules = modules.enable_auto_if(
         cc.compiles('''
             #include <windows.h>
 
             int main() {
-            LoadLibraryW(0);
-            GetProcAddress(0, 0);
-            FreeLibrary(0);
+                LoadLibraryW(0);
+                GetProcAddress(0, 0);
+                FreeLibrary(0);
             }
         ''',
             name: 'LoadLibrary should be used'
@@ -85,11 +89,13 @@ endif
 
 if modules.allowed()
     message('We found a runtime loader: Modules enabled.')
+    conf.set('USE_MODULES', modules.allowed())
+    conf.set('HAVE_MODULES', modules.allowed())
+    conf.set_quoted('LT_MODULE_EXT', os == 'windows' ? '.dll' : '.so')
+    conf.set_quoted('PKGLIBDIR', get_option('libdir') / meson.project_name())
 else
     warning('We did not find a runtime loader: Modules disabled.')
 endif
-conf.set('USE_MODULES', modules.allowed())
-conf.set_quoted('LT_MODULE_EXT', os == 'windows' ? '.dll' : '.so')
 
 build_programs = get_option('programs').allowed()
 build_libmpg123 = get_option('libmpg123').allowed()
@@ -647,7 +653,7 @@ foreach m : check_modules
         conf.set('HAVE_@0@'.format(m.to_upper()), true)
     elif m == 'tinyalsa'
         tinyalsa_dep = dependency('tinyalsa', required: check_forced)
-        if cc.has_function('pcm_open',
+        if tinyalsa_dep.found() and cc.has_function('pcm_open',
             prefix: '#include <tinyalsa/asoundlib.h>',
             dependencies: tinyalsa_dep, required: check_forced)
             output_modules += [m]
@@ -655,7 +661,7 @@ foreach m : check_modules
         endif
     elif m == 'alsa'
         alsa_dep = cc.find_library('asound', required: check_forced)
-        if cc.has_function('snd_pcm_open', prefix: '#include <alsa/asoundlib.h>', dependencies: alsa_dep, required: check_forced)
+        if alsa_dep.found() and cc.has_function('snd_pcm_open', prefix: '#include <alsa/asoundlib.h>', dependencies: alsa_dep, required: check_forced)
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
         endif
@@ -663,7 +669,7 @@ foreach m : check_modules
         jack_dep = dependency('jack', required: check_forced)
         # JACK module uses semaphores, hence -lpthread.
         # Assuming a good install exposing -lpthread.
-        if cc.has_function('sem_post', dependencies: jack_dep, required: check_forced)
+        if jack_dep.found() and cc.has_function('sem_post', dependencies: jack_dep, required: check_forced)
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
         endif
@@ -677,7 +683,7 @@ foreach m : check_modules
         # Assuming a good install of portaudio, with pkg-config.
         # NOTE: if this doesn't link, add kernel32, ole32, setupapi, winmm
         portaudio_dep = dependency('portaudio-2.0', required: check_forced)
-        if cc.has_function('Pa_Initialize', prefix: '#include <portaudio.h>', dependencies: portaudio_dep)
+        if portaudio_dep.found() and cc.has_function('Pa_Initialize', prefix: '#include <portaudio.h>', dependencies: portaudio_dep)
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
             if not cc.has_function('Pa_GetVersion', dependencies: portaudio_dep)
@@ -800,7 +806,7 @@ foreach m : check_modules
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
         elif conf.get('HAVE_AL_AL_H', false) and conf.get('HAVE_AL_ALC_H', false)
-            conf.set('OPENAL_SUBDIR_OPENAL', true)
+            conf.set('OPENAL_SUBDIR_AL', true)
             output_modules += [m]
             conf.set('HAVE_@0@'.format(m.to_upper()), true)
         elif conf.get('HAVE_AL_H', false) and conf.get('HAVE_ALC_H', false)

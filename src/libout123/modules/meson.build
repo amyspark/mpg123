@@ -31,9 +31,10 @@ foreach mod : output_modules
                 include_directories: includes,
                 link_with: libcompat_str,
                 dependencies: mod_dep,
-                version: meson.project_version(),
+                name_prefix: '',
+                gnu_symbol_visibility: 'default',
                 install: true,
-                install_dir: get_option('libdir') / meson.project_name()
+                install_dir: conf.get('PKGLIBDIR')
             )
         endif
     else
