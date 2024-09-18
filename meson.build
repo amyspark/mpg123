@@ -1131,6 +1131,37 @@ endif
 
 ############## Library cleanup
 
+# MSVC requires declspec on symbols when importing from a shared library.
+if get_option('default_library') in ['shared', 'both']
+    if false # cc.has_define('_MSC_VER')
+        error('Shared library build is only supported on Unix platforms')
+    endif
+endif
+
+makedef = find_program('meson/makedef.py')
+
+makedef_args = [makedef]
+
+if cc.has_define('_MSC_VER')
+    dumpbin = find_program('dumpbin', required: true)
+    makedef_args += ['--dumpbin', dumpbin]
+else
+    nm = find_program('nm', required: true)
+    makedef_args += ['--nm', nm]
+endif
+
+extern_prefix = cc.symbols_have_underscore_prefix() ? '_' : ''
+
+makedef_args += ['--prefix', extern_prefix]
+
+if host_machine.system() == 'windows'
+  makedef_os_args = ['--os', 'win']
+elif host_machine.system() in ['darwin', 'ios']
+  makedef_os_args = ['--os', 'darwin']
+else
+  makedef_os_args = ['--os', 'linux']
+endif
+
 subdir('src')
 
 ############## Final Output

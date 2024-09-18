@@ -31,6 +31,7 @@ foreach mod : output_modules
                 include_directories: includes,
                 link_with: libcompat_str,
                 dependencies: mod_dep,
+                version: meson.project_version(),
                 install: true,
                 install_dir: get_option('libdir') / meson.project_name()
             )
@@ -52,7 +53,6 @@ else
         libdefaultmodule_sources,
         include_directories: includes,
         dependencies: libdefaultmodule_deps,
-        install: true,
-        install_dir: get_option('libdir') / meson.project_name()
+        install: false
     )
 endif

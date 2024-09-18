@@ -9,14 +9,15 @@ libcompat = static_library(
     'compat',
     src_compat_libcompat_sources,
     include_directories: includes,
+    dependencies: compat_libs,
     install: false,
 )
 
 # A smaller one for the output modules. Do not want to grow them
 # unnecessarily with unused code.
 src_compat_libcompat_str_sources = files(
-  'compat_str.c',
-  'compat.h',
+    'compat_str.c',
+    'compat.h',
 )
 
 libcompat_str = static_library(
@@ -28,9 +29,9 @@ libcompat_str = static_library(
 
 # A separate lib for the dlopen stuff, less linker noise.
 src_compat_libcompat_dl_sources = files(
-  'compat_dl.c',
-  'wpathconv.h',
-  'compat.h',
+    'compat_dl.c',
+    'wpathconv.h',
+    'compat.h',
 )
 
 libcompat_dl = static_library(

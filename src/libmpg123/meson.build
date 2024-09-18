@@ -446,12 +446,30 @@ if build_libmpg123
         ) + config_h
     endif
 
-    # FIXME: port the module definition generator, and version info
-    libmpg123 = library('mpg123',
+    static_lib = static_library('mpg123-static',
         libmpg123_sources,
         include_directories: includes,
         dependencies: [m_dep, network_deps, compat_libs],
+        gnu_symbol_visibility: 'hidden',
         link_with: [libcompat],
+        install: false,
+    )
+
+    vs_module_def = custom_target('mpg123-def',
+        output: 'mpg123.def',
+        command: [makedef_args, '--regex', '^mpg123_', makedef_os_args, '@INPUT0@'],
+        input: [
+            static_lib
+        ],
+        capture: true
+    )
+
+    libmpg123 = library('mpg123',
+        link_whole: static_lib,
+        include_directories: includes,
+        vs_module_defs: vs_module_def,
+        gnu_symbol_visibility: 'hidden',
+        version: meson.project_version(),
         install: true,
     )
 endif
