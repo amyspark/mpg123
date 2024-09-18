@@ -413,7 +413,8 @@ foreach f : funcs
 endforeach
 
 have_mkfifo = conf.get('HAVE_MKFIFO')
-have_fork = conf.get('HAVE_FORK') and conf.get('HAVE_EXECVP')
+# NOTE: This tests `__builtin_fork` on MinGW
+have_fork = conf.get('HAVE_FORK') and conf.get('HAVE_EXECVP') and os != 'windows'
 
 if not cc.has_define('STDIN_FILENO', prefix: '#include <stdio.h>')
     # FIXME: control_generic.c wants contants
@@ -881,15 +882,11 @@ conf.set('INDEX_SIZE', seektable)
 compat_libs = []
 
 win32_unicode = 'unneeded'
-win32_sockets = false # disabled, does this have to be a feature
 win32_sockets_working = false
 win32_wide_working = false
 win32_winver_bump = false
 
-### mingw.org may not work properly for newer APIs
-if cc.has_define('__MINGW32__') and cc.has_header('_mingw_mac.h')
-    warning('You are using the mingw.org distribution\nmpg123 may not build properly\nPlease switch to using mingw-w64 if possible')
-endif
+# mingw-w64 has the _mingw_mac.h header, skip its test
 
 if win32_specific_codes
     #### Check for Wide functions
@@ -1076,7 +1073,7 @@ endif
 
 #### Use Win32 support codes
 
-ipv6 = ipv6.require(have_ipv6 and network_type != 'disabled')
+ipv6 = ipv6.enable_auto_if(have_ipv6 and network_type != 'disabled')
 
 if network_type != 'disabled' and network_internal == 'winsock2'
     conf.set('WANT_WIN32_SOCKETS', 1)
@@ -1133,7 +1130,7 @@ endif
 
 # MSVC requires declspec on symbols when importing from a shared library.
 if get_option('default_library') in ['shared', 'both']
-    if false # cc.has_define('_MSC_VER')
+    if cc.has_define('_MSC_VER')
         error('Shared library build is only supported on Unix platforms')
     endif
 endif
