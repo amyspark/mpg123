@@ -3,7 +3,7 @@ project('mpg123', 'c',
   license: 'LGPL2.1+',
   # C11 is needed for Metal support
   # Static libraries by default following upstream
-  default_options: [ 'buildtype=debugoptimized', 'c_std=c11', 'default_library=shared', 'b_lundef=true'],
+  default_options: [ 'buildtype=debugoptimized', 'c_std=c99', 'default_library=shared', 'b_lundef=true'],
   version: '1.32.7',
 )
 
@@ -416,9 +416,10 @@ have_mkfifo = conf.get('HAVE_MKFIFO')
 have_fork = conf.get('HAVE_FORK') and conf.get('HAVE_EXECVP')
 
 if not cc.has_define('STDIN_FILENO', prefix: '#include <stdio.h>')
-    conf.set('STDIN_FILENO', '(_fileno(stdin))')
-    conf.set('STDOUT_FILENO', '(_fileno(stdout))')
-    conf.set('STDERR_FILENO', '(_fileno(stderr))')
+    # FIXME: control_generic.c wants contants
+    conf.set('STDIN_FILENO', 0) #'(_fileno(stdin))')
+    conf.set('STDOUT_FILENO', 1) #'(_fileno(stdout))')
+    conf.set('STDERR_FILENO', 2) #'(_fileno(stderr))')
 endif
 
 conf.set('HAVE__SETMODE', cc.compiles('''
