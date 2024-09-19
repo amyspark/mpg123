@@ -17,7 +17,6 @@ if build_libsyn123
         include_directories: includes,
         link_with: [libcompat_str],
         dependencies: [m_dep],
-        gnu_symbol_visibility: 'hidden',
         install: false,
     )
 
@@ -33,6 +32,7 @@ if build_libsyn123
     libsyn123 = library(
         'syn123',
         link_whole: static_lib,
+        link_args: vflag.format(vs_module_def.full_path()),
         vs_module_defs: vs_module_def,
         version: meson.project_version(),
         install: true

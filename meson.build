@@ -1,7 +1,7 @@
 project('mpg123', 'c',
   meson_version: '>= 1.3.0',
   license: 'LGPL2.1+',
-  default_options: [ 'buildtype=debugoptimized', 'c_std=c99', 'default_library=shared', 'b_lundef=true'],
+  default_options: [ 'buildtype=debugoptimized', 'c_std=c11', 'default_library=shared', 'b_lundef=true'],
   version: '1.32.7',
 )
 
@@ -229,9 +229,9 @@ conf.set('HAVE_LAYER3', layer3.allowed())
 
 seektable = get_option('seektable')
 
-if cc.compiles('int main() { __asm__(\".balign 4\"); return 0; }', name: '.balign is present')
+if cc.compiles('int main() { __asm__(".balign 4"); return 0; }', name: '.balign is present')
     conf.set('ASMALIGN_BALIGN', true)
-elif cc.compiles('int main() { __asm__(\".align 3\"); return 0; }', name: 'Define if .align takes 3 for alignment of 2^3=8 bytes instead of 8.')
+elif cc.compiles('int main() { __asm__(".align 3"); return 0; }', name: 'Define if .align takes 3 for alignment of 2^3=8 bytes instead of 8.')
     conf.set('ASMALIGN_EXP', true)
 else
     conf.set('ASMALIGN_BYTE', true)
@@ -275,6 +275,16 @@ endif
 ############### Really basic headers, needed for other checks.
 
 headers = [
+    # These come from autoconf and are not listed
+    'stdio.h',
+    'stdlib.h',
+    'string.h',
+    'inttypes.h',
+    'stdint.h',
+    'strings.h',
+    'sys/stat.h',
+    'sys/types.h',
+
     'unistd.h',
     'sched.h',
     'sys/ioctl.h',
@@ -291,7 +301,9 @@ headers = [
 
 foreach h : headers
     id = 'HAVE_@0@'.format(h.to_upper().underscorify())
-    conf.set(id, cc.has_header(h))
+    if cc.has_header(h)
+        conf.set10(id, true)
+    endif
 endforeach
 
 ############## LFS stuff
@@ -482,7 +494,7 @@ headers = [
 foreach h : headers
     # FIXME: locale.h in compat_str.c
     if h == 'locale.h'
-        conf.set10('HAVE_@0@'.format(h.to_upper().underscorify()), cc.has_header(h))
+        conf.set10('HAVE_@0@'.format(h.to_upper().underscorify()), true)
     else
         conf.set('HAVE_@0@'.format(h.to_upper().underscorify()), cc.has_header(h))
     endif
@@ -649,8 +661,8 @@ endif
 
 # Dummy output module is always built alongside libout123, but not
 # when just building the modules.
-if build_libout123
-	check_modules += ['dummy']
+if build_libout123 and 'dummy' not in check_modules
+    check_modules += ['dummy']
 endif
 
 foreach m : check_modules
@@ -1081,7 +1093,7 @@ if network_type == 'auto'
     endif
 endif
 
-if network_type == 'exec' and have_fork
+if network_type == 'exec' and not have_fork
   error('exec network support selected but fork not available')
 endif
 
@@ -1104,7 +1116,7 @@ conf.set('NET123_WININET', network_type == 'wininethttp') # or wininet
 ## historical artifact? -amyspark
 if conf.get('NET123_WINHTTP', false) or conf.get('NET123_WININET', false)
     if not cc.has_type('WINBOOL', prefix: '#include <minwindef.h>')
-    conf.set('WINBOOL', 'BOOL')
+        conf.set('WINBOOL', 'BOOL')
     endif
 endif
 
@@ -1165,12 +1177,15 @@ extern_prefix = cc.symbols_have_underscore_prefix() ? '_' : ''
 
 makedef_args += ['--prefix', extern_prefix]
 
-if host_machine.system() == 'windows'
-  makedef_os_args = ['--os', 'win']
-elif host_machine.system() in ['darwin', 'ios']
-  makedef_os_args = ['--os', 'darwin']
+if os in ['windows', 'cygwin']
+    vflag = ''
+    makedef_os_args = ['--os', 'win']
+elif os in ['darwin', 'ios']
+    vflag = '-Wl,-exported_symbols_list,@0@'
+    makedef_os_args = ['--os', 'darwin']
 else
-  makedef_os_args = ['--os', 'linux']
+    vflag = '-Wl,--version-script,@0@'
+    makedef_os_args = ['--os', 'linux']
 endif
 
 subdir('src')

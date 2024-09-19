@@ -10,6 +10,7 @@ libcompat = static_library(
     src_compat_libcompat_sources,
     include_directories: includes,
     dependencies: compat_libs,
+    gnu_symbol_visibility: 'hidden',
     install: false,
 )
 
@@ -24,6 +25,7 @@ libcompat_str = static_library(
     'compat_str',
     src_compat_libcompat_str_sources,
     include_directories: includes,
+    gnu_symbol_visibility: 'hidden',
     install: false,
 )
 
@@ -37,7 +39,8 @@ src_compat_libcompat_dl_sources = files(
 libcompat_dl = static_library(
     'compat_dl',
     src_compat_libcompat_dl_sources,
-    link_with: libdl,
+    dependencies: libdl,
     include_directories: includes,
+    gnu_symbol_visibility: 'hidden',
     install: false,
 )

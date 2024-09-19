@@ -451,7 +451,6 @@ if build_libmpg123
         libmpg123_sources,
         include_directories: includes,
         dependencies: [m_dep, network_deps, compat_libs],
-        gnu_symbol_visibility: 'hidden',
         link_with: [libcompat],
         install: false,
     )
@@ -467,9 +466,9 @@ if build_libmpg123
 
     libmpg123 = library('mpg123',
         link_whole: static_lib,
+        link_args: vflag.format(vs_module_def.full_path()),
         include_directories: includes,
         vs_module_defs: vs_module_def,
-        gnu_symbol_visibility: 'hidden',
         version: meson.project_version(),
         install: true,
     )

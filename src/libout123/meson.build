@@ -56,7 +56,6 @@ if conf.get('NEED_MAINLIB', false) and build_libout123
         include_directories: includes,
         dependencies: libout123_deps,
         link_with: libout123_libs,
-        gnu_symbol_visibility: 'hidden',
         install: false,
     )
 
@@ -72,6 +71,7 @@ if conf.get('NEED_MAINLIB', false) and build_libout123
     libout123 = library(
         'out123',
         link_whole: static_lib,
+        link_args: vflag.format(vs_module_def.full_path()),
         gnu_symbol_visibility: 'hidden',
         vs_module_defs: vs_module_def,
         version: meson.project_version(),

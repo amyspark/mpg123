@@ -129,6 +129,7 @@ if build_programs
         include_directories: includes,
         link_with: [libcompat],
         dependencies: [libout123_dep, libsyn123_dep],
+        gnu_symbol_visibility: 'hidden',
         install: true,
     )
     if conf.get('HAVE_LFS_WRAP', false)
@@ -138,6 +139,7 @@ if build_programs
             include_directories: includes,
             link_with: [libcompat],
             dependencies: mpg123_deps,
+            gnu_symbol_visibility: 'hidden',
             install: true,
         )
 
@@ -147,6 +149,7 @@ if build_programs
             include_directories: includes,
             link_with: [libcompat],
             dependencies: libmpg123_dep,
+            gnu_symbol_visibility: 'hidden',
             install: true,
         )
 
@@ -156,6 +159,7 @@ if build_programs
             include_directories: includes,
             link_with: [libcompat],
             dependencies: libmpg123_dep,
+            gnu_symbol_visibility: 'hidden',
             install: true,
         )
     endif

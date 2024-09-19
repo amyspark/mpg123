@@ -1,20 +1,14 @@
-# Do not include uneeded headers from mpg123app.h .
+# Do not include unneeded headers from mpg123app.h .
 libout123_mod_cppflags = ['-DBUILDING_OUTPUT_MODULES=1']
 
-# __modules = [
-#     ['output_dummy', 'HAVE_DUMMY', files('dummy.c'), []],
-#     ['output_tinyalsa', 'HAVE_TINYALSA', files('tinyalsa.c'), tinyalsa_dep],
-#     ['output_alsa', 'HAVE_ALSA', files('alsa.c'), alsa_dep],
-#     ['output_coreaudio', 'HAVE_COREAUDIO', files('coreaudio.c'), coreaudio_dep],
-#     ['output_jack', 'HAVE_JACK', files('jack.c'), jack_dep],
-#     ['output_portaudio', 'HAVE_PORTAUDIO', files('portaudio.c'), portaudio_dep],
-#     ['output_pulse', 'HAVE_PULSE', files('pulse.c'), pulse_dep],
-#     ['output_sdl', 'HAVE_SDL', files('sdl.c'), sdl_dep],
-#     ['output_sndio', 'HAVE_SNDIO', files('sndio.c'), sndio_dep],
-#     ['output_win32', 'HAVE_WIN32', files('win32.c'), win32_dep],
-#     ['output_win32_wasapi', 'HAVE_WIN32_WASAPI', files('win32_wasapi.c'), win32_wasapi_dep],
-#     ['output_openal', 'HAVE_OPENAL', files('openal.c'), openal_dep],
-# ]
+# On macOS, the default suffix for loadable modules is .so, but meson uses
+# .dylib by default. Since the code expects .so and autotools was using .so,
+# make meson do the same.
+# See https://github.com/p11-glue/p11-kit/commit/8a4348e8468d08d992cb7d22a4d887d0191383f6
+module_suffix = []
+if os in ['darwin', 'ios']
+  module_suffix = 'so'
+endif
 
 foreach mod : output_modules
     mod_f = files(
@@ -32,6 +26,7 @@ foreach mod : output_modules
                 link_with: libcompat_str,
                 dependencies: mod_dep,
                 name_prefix: '',
+                name_suffix: module_suffix,
                 gnu_symbol_visibility: 'default',
                 install: true,
                 install_dir: conf.get('PKGLIBDIR')
