@@ -411,102 +411,124 @@ int attribute_align_arg mpg123_position( mpg123_handle *mh, off_t INT123_frame_o
 // The open routines are trivial now. I only have differeing symbols suffixes
 // to keep legacy ABI.
 
+// These must have MPG123_EXPORT applied manually because they're not defined in
+// libmpg123.c (where MPG123_PORTABLE_API is forced) -- amyspark
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_32(mpg123_handle *mh, const char *path)
 {
 	return mpg123_open(mh, path);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_fixed_32( mpg123_handle *mh, const char *path
 ,	int channels, int encoding )
 {
 	return mpg123_open_fixed(mh, path, channels, encoding);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_fd_32(mpg123_handle *mh, int fd)
 {
 	return mpg123_open_fd(mh, fd);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_handle_32(mpg123_handle *mh, void *iohandle)
 {
 	return mpg123_open_handle(mh, iohandle);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_framebyframe_decode_32(mpg123_handle *mh, off_t *num, unsigned char **audio, size_t *bytes)
 {
 	return mpg123_framebyframe_decode(mh, num, audio, bytes);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_decode_frame_32(mpg123_handle *mh, off_t *num, unsigned char **audio, size_t *bytes)
 {
 	return mpg123_decode_frame(mh, num, audio, bytes);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_timeframe_32(mpg123_handle *mh, double seconds)
 {
 	return mpg123_timeframe64(mh, seconds);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_tell_32(mpg123_handle *mh)
 {
 	return mpg123_tell(mh);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_tellframe_32(mpg123_handle *mh)
 {
 	return mpg123_tellframe(mh);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_tell_stream_32(mpg123_handle *mh)
 {
 	return mpg123_tell_stream(mh);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_seek_32(mpg123_handle *mh, off_t sampleoff, int whence)
 {
 	return mpg123_seek(mh, sampleoff, whence);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_feedseek_32(mpg123_handle *mh, off_t sampleoff, int whence, off_t *input_offset)
 {
 	return mpg123_feedseek(mh, sampleoff, whence, input_offset);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_seek_frame_32(mpg123_handle *mh, off_t offset, int whence)
 {
 	return mpg123_seek_frame(mh, offset, whence);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_set_filesize_32(mpg123_handle *mh, off_t size)
 {
 	return mpg123_set_filesize(mh, size);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_framelength_32(mpg123_handle *mh)
 {
 	return mpg123_framelength(mh);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_length_32(mpg123_handle *mh)
 {
 	return mpg123_length(mh);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_index_32(mpg123_handle *mh, off_t **offsets, off_t *step, size_t *fill)
 {
 	return mpg123_index(mh, offsets, step, fill);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_set_index_32(mpg123_handle *mh, off_t *offsets, off_t step, size_t fill)
 {
 	return mpg123_set_index(mh, offsets, step, fill);
 }
 
+MPG123_EXPORT
 off_t attribute_align_arg mpg123_framepos_32(mpg123_handle *mh)
 {
 	return mpg123_framepos(mh);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_position_32( mpg123_handle *mh, off_t INT123_frame_offset
 ,	off_t buffered_bytes, off_t *current_frame, off_t *frames_left
 ,	double *current_seconds, double *seconds_left )
@@ -532,104 +554,124 @@ int attribute_align_arg mpg123_position_32( mpg123_handle *mh, off_t INT123_fram
 // When 64 bit offsets are enforced, libmpg123.c defines the _64 functions directly.
 // There is no actual wrapper work, anyway.
 
+// Same as above re: exports --amyspark
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_64(mpg123_handle *mh, const char *path)
 {
 	return mpg123_open(mh, path);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_fixed_64( mpg123_handle *mh, const char *path
 ,	int channels, int encoding )
 {
 	return mpg123_open_fixed(mh, path, channels, encoding);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_fd_64(mpg123_handle *mh, int fd)
 {
 	return mpg123_open_fd(mh, fd);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_handle_64(mpg123_handle *mh, void *iohandle)
 {
 	return mpg123_open_handle(mh, iohandle);
 }
 #endif
 
-
+MPG123_EXPORT
 int attribute_align_arg mpg123_framebyframe_decode_64(mpg123_handle *mh, OFF64 *num, unsigned char **audio, size_t *bytes)
 {
 	return mpg123_framebyframe_decode64(mh, (int64_t*)num, audio, bytes);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_decode_frame_64(mpg123_handle *mh, OFF64 *num, unsigned char **audio, size_t *bytes)
 {
 	return mpg123_decode_frame64(mh, (int64_t*)num, audio, bytes);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_timeframe_64(mpg123_handle *mh, double seconds)
 {
 	return mpg123_timeframe64(mh, seconds);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_tell_64(mpg123_handle *mh)
 {
 	return mpg123_tell64(mh);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_tellframe_64(mpg123_handle *mh)
 {
 	return mpg123_tellframe64(mh);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_tell_stream_64(mpg123_handle *mh)
 {
 	return mpg123_tell_stream64(mh);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_seek_64(mpg123_handle *mh, OFF64 sampleoff, int whence)
 {
 	return mpg123_seek64(mh, (int64_t)sampleoff, whence);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_feedseek_64(mpg123_handle *mh, OFF64 sampleoff, int whence, OFF64 *input_offset)
 {
 	return mpg123_feedseek64(mh, (int64_t)sampleoff, whence, (int64_t*)input_offset);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_seek_frame_64(mpg123_handle *mh, OFF64 offset, int whence)
 {
 	return mpg123_seek_frame64(mh, (int64_t)offset, whence);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_set_filesize_64(mpg123_handle *mh, OFF64 size)
 {
 	return mpg123_set_filesize64(mh, (int64_t)size);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_framelength_64(mpg123_handle *mh)
 {
 	return mpg123_framelength64(mh);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_length_64(mpg123_handle *mh)
 {
 	return mpg123_length64(mh);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_index_64(mpg123_handle *mh, OFF64 **offsets, OFF64 *step, size_t *fill)
 {
 	return mpg123_index64(mh, (int64_t**)offsets, (int64_t*)step, fill);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_set_index_64(mpg123_handle *mh, OFF64 *offsets, OFF64 step, size_t fill)
 {
 	return mpg123_set_index64(mh, (int64_t*)offsets, (int64_t)step, fill);
 }
 
+MPG123_EXPORT
 OFF64 attribute_align_arg mpg123_framepos_64(mpg123_handle *mh)
 {
 	return mpg123_framepos64(mh);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_position_64( mpg123_handle *mh, OFF64 INT123_frame_offset
 ,	OFF64 buffered_bytes, OFF64 *current_frame, OFF64 *frames_left
 ,	double *current_seconds, double *seconds_left )
@@ -879,6 +921,8 @@ static mpg123_ssize_t fallback_read(int fd, void *buf, size_t count)
 #endif
 
 /* Reader replacement prepares the hidden handle storage for next mpg123_open_fd() or plain mpg123_open(). */
+
+MPG123_EXPORT
 int attribute_align_arg mpg123_replace_reader(mpg123_handle *mh, mpg123_ssize_t (*r_read) (int, void *, size_t), off_t (*r_lseek)(int, off_t, int) )
 {
 	struct wrap_data* ioh;
@@ -909,6 +953,7 @@ int attribute_align_arg mpg123_replace_reader(mpg123_handle *mh, mpg123_ssize_t 
 	return MPG123_OK;
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_replace_reader_handle(mpg123_handle *mh, mpg123_ssize_t (*r_read) (void*, void *, size_t), off_t (*r_lseek)(void*, off_t, int), void (*cleanup)(void*))
 {
 	struct wrap_data* ioh;
@@ -930,11 +975,14 @@ int attribute_align_arg mpg123_replace_reader_handle(mpg123_handle *mh, mpg123_s
 }
 
 #if SIZEOF_OFF_T == 4
+
+MPG123_EXPORT
 int attribute_align_arg mpg123_replace_reader_32(mpg123_handle *mh, mpg123_ssize_t (*r_read) (int, void *, size_t), off_t (*r_lseek)(int, off_t, int) )
 {
 	return mpg123_replace_reader(mh, r_read, r_lseek);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_replace_reader_handle_32(mpg123_handle *mh, mpg123_ssize_t (*r_read) (void*, void *, size_t), off_t (*r_lseek)(void*, off_t, int), void (*cleanup)(void*))
 {
 	return mpg123_replace_reader_handle(mh, r_read, r_lseek, cleanup);
@@ -944,6 +992,7 @@ int attribute_align_arg mpg123_replace_reader_handle_32(mpg123_handle *mh, mpg12
 
 #ifdef LFS_LARGEFILE_64
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_replace_reader_64(mpg123_handle *mh, mpg123_ssize_t (*r_read) (int, void *, size_t), off64_t (*r_lseek)(int, off64_t, int) )
 {
 	struct wrap_data* ioh;
@@ -974,6 +1023,7 @@ int attribute_align_arg mpg123_replace_reader_64(mpg123_handle *mh, mpg123_ssize
 	return MPG123_OK;
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_replace_reader_handle_64(mpg123_handle *mh, mpg123_ssize_t (*r_read) (void*, void *, size_t), off64_t (*r_lseek)(void*, off64_t, int), void (*cleanup)(void*))
 {
 	struct wrap_data* ioh;
@@ -998,11 +1048,14 @@ int attribute_align_arg mpg123_replace_reader_handle_64(mpg123_handle *mh, mpg12
 
 // If 64 bit off_t is enforced, libmpg123.c already defines the _64 functions.
 #ifndef FORCED_OFF_64
+
+MPG123_EXPORT
 int attribute_align_arg mpg123_replace_reader_64(mpg123_handle *mh, mpg123_ssize_t (*r_read) (int, void *, size_t), off_t (*r_lseek)(int, off_t, int) )
 {
 	return mpg123_replace_reader(mh, r_read, r_lseek);
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_replace_reader_handle_64(mpg123_handle *mh, mpg123_ssize_t (*r_read) (void*, void *, size_t), off_t (*r_lseek)(void*, off_t, int), void (*cleanup)(void*))
 {
 	return mpg123_replace_reader_handle(mh, r_read, r_lseek, cleanup);

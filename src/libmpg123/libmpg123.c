@@ -570,6 +570,8 @@ double attribute_align_arg mpg123_geteq2(mpg123_handle *mh, int channel, int ban
 #endif
 
 /* plain file access, no http! */
+
+MPG123_EXPORT
 int attribute_align_arg mpg123_open(mpg123_handle *mh, const char *path)
 {
 	if(mh == NULL) return MPG123_BAD_HANDLE;
@@ -624,6 +626,7 @@ static int INT123_open_fixed_post(mpg123_handle *mh, int channels, int encoding)
 	return err;
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_fixed( mpg123_handle *mh, const char *path
 ,	int channels, int encoding )
 {
@@ -635,6 +638,7 @@ int attribute_align_arg mpg123_open_fixed( mpg123_handle *mh, const char *path
 	return err;
 }
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_fd(mpg123_handle *mh, int fd)
 {
 	if(mh == NULL) return MPG123_BAD_HANDLE;
@@ -650,6 +654,7 @@ int attribute_align_arg mpg123_open_fd(mpg123_handle *mh, int fd)
 }
 #endif // PORTABLE_API
 
+MPG123_EXPORT
 int attribute_align_arg mpg123_open_handle(mpg123_handle *mh, void *iohandle)
 {
 	if(mh == NULL) return MPG123_BAD_HANDLE;

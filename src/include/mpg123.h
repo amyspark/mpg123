@@ -30,8 +30,11 @@
  * imports the functions from the DLL. 
  */
 #ifdef BUILD_MPG123_DLL
-/* The dll exports. */
+#ifdef _WIN32
 #define MPG123_EXPORT __declspec(dllexport)
+#else
+#define MPG123_EXPORT __attribute__((visibility("default")))
+#endif
 #else
 #ifdef LINK_MPG123_DLL
 /* The exe imports. */
@@ -170,12 +173,14 @@ typedef struct mpg123_handle_struct mpg123_handle;
  * \param patch optional address to store patchlevel version number
  * \return full version string (like "1.2.3-beta4 (experimental)")
  */
+MPG123_EXPORT
 const char *mpg123_distversion(unsigned int *major, unsigned int *minor, unsigned int *patch);
 
 /** Get API version of library build.
  * \param patch optional address to store patchlevel
  * \return API version of library
  */
+MPG123_EXPORT
 unsigned int mpg123_libversion(unsigned int *patch);
 
 /** Useless no-op that used to do initialization work.
