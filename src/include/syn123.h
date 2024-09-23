@@ -193,6 +193,7 @@ enum syn123_error
  *  \param errcode the code returned by an API function
  *  \return error phrase
  */
+MPG123_EXPORT
 const char* syn123_strerror(int errcode);
 
 /** Create new handle with specified output format.
