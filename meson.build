@@ -21,7 +21,8 @@ librt_dep = cc.find_library('rt', required: false)
 conf.set('HAVE_CLOCK_GETTIME', cc.has_function('clock_gettime', dependencies: librt_dep) and os != 'windows')
 
 modules = get_option('modules').enable_if(
-    get_option('default_library') == 'shared'
+    # MSVC requires declspec on symbols when exporting from a shared library.
+    get_option('default_library') == 'shared' and not cc.has_define('_MSC_VER')
 )
 
 conf.set('DYNAMIC_BUILD', modules.allowed())
