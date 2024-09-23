@@ -11,7 +11,7 @@
 */
 
 #include "../compat/compat.h"
-#include "out123.h"
+#include "out123_int.h"
 
 static char* always_strdup(const char *in)
 {
