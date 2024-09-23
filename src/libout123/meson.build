@@ -51,29 +51,13 @@ else
 endif
 
 if conf.get('NEED_MAINLIB', false) and build_libout123
-    static_lib = static_library('out123-static',
+    libout123 = library(
+        'out123',
         libout123_sources,
         include_directories: includes,
         dependencies: libout123_deps,
         link_with: libout123_libs,
-        install: false,
-    )
-
-    vs_module_def = custom_target('out123-def',
-        output: 'out123.def',
-        command: [makedef_args, '--regex', '^out123_', makedef_os_args, '@INPUT0@'],
-        input: [
-            static_lib
-        ],
-        capture: true
-    )
-
-    libout123 = library(
-        'out123',
-        link_whole: static_lib,
-        link_args: vflag.format(vs_module_def.full_path()),
         gnu_symbol_visibility: 'hidden',
-        vs_module_defs: vs_module_def,
         version: meson.project_version(),
         install: true
     )
