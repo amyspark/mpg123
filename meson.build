@@ -16,6 +16,11 @@ conf = configuration_data()
 conf.set_quoted('PACKAGE_NAME', meson.project_name())
 conf.set_quoted('PACKAGE_VERSION', meson.project_version())
 
+# All the defines use the unprefixed macro.
+if cc.has_define('_WIN32') and not cc.has_define('WIN32')
+    add_project_arguments('-DWIN32', language: 'c')
+endif
+
 librt_dep = cc.find_library('rt', required: false)
 # NOTE: provided by winpthread, there's a fallback on out123 to Win32 APIs
 conf.set('HAVE_CLOCK_GETTIME', cc.has_function('clock_gettime', dependencies: librt_dep) and os != 'windows')
@@ -1154,13 +1159,6 @@ if ipv6.allowed()
 endif
 
 ############## Library cleanup
-
-# MSVC requires declspec on symbols when importing from a shared library.
-if get_option('default_library') in ['shared', 'both']
-    if cc.has_define('_MSC_VER')
-        error('Shared library build is only supported on Unix platforms')
-    endif
-endif
 
 makedef = find_program('meson/makedef.py')
 
